@@ -248,6 +248,11 @@ public class GuiRenderer {
         texts.add(getOp(textPool, x, y, color).set(text, theme.textRenderer(), title));
     }
 
+    // Draw with Minecraft's native pixel font instead of the selected Meteor theme font.
+    public void minecraftText(String text, double x, double y, Color color) {
+        post(() -> drawContext.drawText(mc.textRenderer, text, (int) x, (int) y, color.getPacked(), false));
+    }
+
     public void texture(double x, double y, double width, double height, double rotation, Texture texture) {
         post(() -> {
             rTex.begin();
