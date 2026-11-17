@@ -76,10 +76,6 @@ public class WheatFarmer extends Module {
 
     @Override
     public void onDeactivate() {
-        if (fullInventoryUseTicks > 0 && mc.options != null) {
-            mc.options.useKey.setPressed(false);
-        }
-        fullInventoryUseTicks = 0;
         inventoryWasFull = false;
     }
 
