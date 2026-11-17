@@ -50,7 +50,7 @@ public class MeteorGuiTheme extends GuiTheme {
     public final Setting<Double> scale = sgGeneral.add(new DoubleSetting.Builder()
         .name("scale")
         .description("Scale of the GUI.")
-        .defaultValue(1)
+        .defaultValue(1.05)
         .min(0.75)
         .sliderRange(0.75, 4)
         .onSliderRelease()
@@ -86,9 +86,9 @@ public class MeteorGuiTheme extends GuiTheme {
 
     // Colors
 
-    public final Setting<SettingColor> accentColor = color("accent", "Main color of the GUI.", new SettingColor(75, 220, 190));
-    public final Setting<SettingColor> checkboxColor = color("checkbox", "Color of checkbox.", new SettingColor(145, 61, 226));
-    public final Setting<SettingColor> plusColor = color("plus", "Color of plus button.", new SettingColor(75, 220, 190));
+    public final Setting<SettingColor> accentColor = color("accent", "Main color of the GUI.", new SettingColor(111, 103, 255));
+    public final Setting<SettingColor> checkboxColor = color("checkbox", "Color of checkbox.", new SettingColor(111, 103, 255));
+    public final Setting<SettingColor> plusColor = color("plus", "Color of plus button.", new SettingColor(111, 103, 255));
     public final Setting<SettingColor> minusColor = color("minus", "Color of minus button.", new SettingColor(255, 50, 50));
     public final Setting<SettingColor> favoriteColor = color("favorite", "Color of checked favorite button.", new SettingColor(180, 130, 255));
 
@@ -106,21 +106,21 @@ public class MeteorGuiTheme extends GuiTheme {
     public final ThreeStateColorSetting backgroundColor = new ThreeStateColorSetting(
             sgBackgroundColors,
             "background",
-            new SettingColor(12, 16, 22, 238),
-            new SettingColor(17, 23, 31, 242),
-            new SettingColor(23, 31, 41, 245)
+            new SettingColor(13, 15, 24, 246),
+            new SettingColor(19, 22, 34, 248),
+            new SettingColor(26, 29, 44, 250)
     );
 
-    public final Setting<SettingColor> moduleBackground = color(sgBackgroundColors, "module-background", "Color of module background when active.", new SettingColor(31, 48, 53));
+    public final Setting<SettingColor> moduleBackground = color(sgBackgroundColors, "module-background", "Color of module background when active.", new SettingColor(31, 34, 54));
 
     // Outline
 
     public final ThreeStateColorSetting outlineColor = new ThreeStateColorSetting(
             sgOutline,
             "outline",
-            new SettingColor(5, 9, 13),
-            new SettingColor(8, 13, 18),
-            new SettingColor(12, 19, 25)
+            new SettingColor(7, 8, 15),
+            new SettingColor(12, 14, 24),
+            new SettingColor(24, 27, 42)
     );
 
     // Separator
@@ -144,12 +144,12 @@ public class MeteorGuiTheme extends GuiTheme {
     public final ThreeStateColorSetting sliderHandle = new ThreeStateColorSetting(
             sgSlider,
             "slider-handle",
-            new SettingColor(55, 190, 165),
+            new SettingColor(82, 75, 220),
             new SettingColor(75, 220, 190),
-            new SettingColor(105, 235, 210)
+            new SettingColor(145, 139, 255)
     );
 
-    public final Setting<SettingColor> sliderLeft = color(sgSlider, "slider-left", "Color of slider left part.", new SettingColor(45, 155, 140));
+    public final Setting<SettingColor> sliderLeft = color(sgSlider, "slider-left", "Color of slider left part.", new SettingColor(80, 73, 205));
     public final Setting<SettingColor> sliderRight = color(sgSlider, "slider-right", "Color of slider right part.", new SettingColor(50, 50, 50));
 
     // Starscript
