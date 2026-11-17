@@ -134,6 +134,7 @@ public class ModulesScreen extends TabScreen {
     private void refreshSettingsPanel() {
         if (settingsWindow == null) return;
         settingsWindow.clear();
+        settingsPanel = null;
 
         if (selectedModule == null) {
             settingsWindow.add(theme.label("Select a module to view its settings.", false)).expandX().pad(6);
@@ -151,7 +152,8 @@ public class ModulesScreen extends TabScreen {
         };
 
         if (!module.settings.groups.isEmpty()) {
-            settingsPanel = new WContainerSettings(module);
+            settingsPanel = theme.verticalList();
+            settingsPanel.add(theme.settings(module.settings)).expandX();
             settingsWindow.add(settingsPanel).expandX();
         }
 
@@ -201,11 +203,4 @@ public class ModulesScreen extends TabScreen {
         super.reload();
     }
 
-    private static class WContainerSettings extends meteordevelopment.meteorclient.gui.widgets.containers.WVerticalList {
-        private final Module module;
-
-        private WContainerSettings(Module module) {
-            this.module = module;
-        }
-    }
 }
