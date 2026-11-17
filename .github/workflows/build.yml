@@ -51,11 +51,14 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
 
-      - name: Publish
-        run: ./gradlew publish -Pcommit=${{ github.sha }} -Pbuild_number=${{ steps.build-number.outputs.number }}
-        env:
-          MAVEN_METEOR_ALIAS: ${{ secrets.MAVEN_METEOR_ALIAS }}
-          MAVEN_METEOR_TOKEN: ${{ secrets.MAVEN_METEOR_TOKEN }}
+      - name: Upload JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fizzy-Client
+          path: |
+            build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Discord webhook
         run: |
