@@ -38,7 +38,7 @@ public class ModulesScreen extends TabScreen {
     private WWindow settingsWindow;
     private WVerticalList moduleList;
     private WTextBox searchBox;
-    private WContainerSettings settingsPanel;
+    private WVerticalList settingsPanel;
 
     public ModulesScreen(GuiTheme theme) {
         super(theme, Tabs.get().getFirst());
