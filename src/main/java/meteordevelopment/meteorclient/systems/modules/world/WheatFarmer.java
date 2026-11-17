@@ -82,7 +82,6 @@ public class WheatFarmer extends Module {
     public void onDeactivate() {
         if (fullInventoryUseTicks > 0 && mc.options != null) {
             mc.options.useKey.setPressed(false);
-            mc.getNetworkHandler().sendChatCommand("sell");
         }
         fullInventoryUseTicks = 0;
         inventoryWasFull = false;
