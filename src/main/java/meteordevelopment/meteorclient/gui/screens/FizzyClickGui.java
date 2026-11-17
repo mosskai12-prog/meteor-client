@@ -111,8 +111,8 @@ final class FizzyClickGui extends WWidget {
         roundedRect(renderer, px + theme.scale(1), py + theme.scale(1), side, ph - theme.scale(2), theme.scale(11), SIDEBAR);
         renderer.quad(px + side - 1, py + theme.scale(12), 1, ph - theme.scale(24), new Color(48, 46, 83, 255));
 
-        renderer.text("FIZZY CLIENT", px + theme.scale(18), py + theme.scale(22), TEXT, true);
-        renderer.text("MODULES", px + theme.scale(18), py + theme.scale(46), MUTED, false);
+        renderer.minecraftText("FIZZY CLIENT", px + theme.scale(18), py + theme.scale(22), TEXT);
+        renderer.minecraftText("MODULES", px + theme.scale(18), py + theme.scale(46), MUTED);
 
         double categoryY = py + theme.scale(88);
         double selectedTargetY = categoryY;
@@ -126,7 +126,7 @@ final class FizzyClickGui extends WWidget {
             double hoverAmount = categoryHover.compute(category, (key, value) -> animate(value == null ? 0 : value, hover ? 1 : 0, 14, delta));
             if (active || hoverAmount > 0.01) roundedRect(renderer, bx, categoryY, bw, bh, theme.scale(6), active ? new Color(48, 39, 99, 255) : new Color(19 + (int)(10 * hoverAmount), 21 + (int)(10 * hoverAmount), 42 + (int)(18 * hoverAmount), 255));
             if (active) renderer.quad(bx, categoryY, theme.scale(3), bh, PURPLE);
-            renderer.text(category.name, bx + theme.scale(12), categoryY + theme.scale(8), active ? TEXT : MUTED, false);
+            renderer.minecraftText(category.name, bx + theme.scale(12), categoryY + theme.scale(8), active ? TEXT : MUTED);
             categoryY += theme.scale(40);
         }
 
@@ -134,21 +134,21 @@ final class FizzyClickGui extends WWidget {
         renderer.quad(px + theme.scale(9), selectedCategoryY, theme.scale(3), theme.scale(32), PURPLE);
 
         String heading = selected == null ? "Modules" : selected.name + " Modules";
-        renderer.text(heading, contentX, py + theme.scale(23), TEXT, true);
+        renderer.minecraftText(heading, contentX, py + theme.scale(23), TEXT);
 
         int total = selected == null ? 0 : Modules.get().getGroup(selected).size();
         int enabled = 0;
         if (selected != null) for (Module module : Modules.get().getGroup(selected)) if (module.isActive()) enabled++;
-        renderer.text(enabled + " enabled  •  " + total + " modules", contentX, py + theme.scale(50), MUTED, false);
+        renderer.minecraftText(enabled + " enabled  •  " + total + " modules", contentX, py + theme.scale(50), MUTED);
 
         double searchY = py + theme.scale(21);
         double searchW = theme.scale(220);
         double searchX = px + pw - searchW - theme.scale(18);
         roundedRect(renderer, searchX, searchY, searchW, theme.scale(34), theme.scale(7), new Color(22, 24, 45, 255));
-        renderer.text((search.isEmpty() ? "⌕  Search modules" : "⌕  " + search), searchX + theme.scale(12), searchY + theme.scale(11), search.isEmpty() ? MUTED : TEXT, false);
+        renderer.minecraftText((search.isEmpty() ? "⌕  Search modules" : "⌕  " + search), searchX + theme.scale(12), searchY + theme.scale(11), search.isEmpty() ? MUTED : TEXT);
         if (searchFocused) renderer.quad(searchX, searchY + theme.scale(33), searchW, theme.scale(1), PURPLE);
 
-        renderer.text("AVAILABLE MODULES", contentX, py + theme.scale(88), MUTED, false);
+        renderer.minecraftText("AVAILABLE MODULES", contentX, py + theme.scale(88), MUTED);
 
         List<Module> modules = selected == null ? List.of() : Modules.get().getGroup(selected);
         double cardY = listY - scroll;
@@ -167,13 +167,13 @@ final class FizzyClickGui extends WWidget {
                 double toggleAmount = toggleProgress.compute(module, (key, value) -> animate(value == null ? (module.isActive() ? 1 : 0) : value, module.isActive() ? 1 : 0, 16, delta));
                 roundedRect(renderer, contentX, drawY, contentW, rowH - theme.scale(7), theme.scale(8), hoverAmount > 0.02 ? new Color(19 + (int)(10 * hoverAmount), 21 + (int)(10 * hoverAmount), 42 + (int)(18 * hoverAmount), 255) : CARD);
 
-                renderer.text(module.title, contentX + theme.scale(13), cardY + theme.scale(13), TEXT, true);
+                renderer.minecraftText(module.title, contentX + theme.scale(13), cardY + theme.scale(13), TEXT);
                 String description = module.description == null ? "" : module.description;
                 if (description.length() > 58) description = description.substring(0, 55) + "...";
-                renderer.text(description, contentX + theme.scale(13), cardY + theme.scale(38), MUTED, false);
+                renderer.minecraftText(description, contentX + theme.scale(13), cardY + theme.scale(38), MUTED);
 
                 double arrowX = contentX + contentW - theme.scale(78);
-                renderer.text("›", arrowX, cardY + theme.scale(23), MUTED, false);
+                renderer.minecraftText("›", arrowX, cardY + theme.scale(23), MUTED);
 
                 double toggleX = contentX + contentW - theme.scale(49);
                 double toggleY = cardY + theme.scale(25);
@@ -186,8 +186,8 @@ final class FizzyClickGui extends WWidget {
         }
 
         renderer.scissorEnd();
-        if (modules.isEmpty()) renderer.text("No modules in this category.", contentX, listY, MUTED, false);
-        else if (cardY <= listY) renderer.text("No modules match your search.", contentX, listY, MUTED, false);
+        if (modules.isEmpty()) renderer.minecraftText("No modules in this category.", contentX, listY, MUTED);
+        else if (cardY <= listY) renderer.minecraftText("No modules match your search.", contentX, listY, MUTED);
     }
 
     @Override
