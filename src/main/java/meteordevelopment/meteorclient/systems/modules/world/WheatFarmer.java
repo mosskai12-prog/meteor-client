@@ -130,7 +130,7 @@ public class WheatFarmer extends Module {
 
     private boolean handleFullInventory() {
         boolean full = true;
-        for (int i = 0; i < mc.player.getInventory().size(); i++) {
+        for (int i = 0; i < 36; i++) {
             if (mc.player.getInventory().getStack(i).isEmpty()) {
                 full = false;
                 break;
