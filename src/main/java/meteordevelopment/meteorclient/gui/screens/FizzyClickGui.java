@@ -19,6 +19,8 @@ import net.minecraft.client.input.KeyInput;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.HashMap;
+import java.util.Map;
 
 import static meteordevelopment.meteorclient.MeteorClient.mc;
 import static meteordevelopment.meteorclient.utils.Utils.getWindowHeight;
@@ -40,6 +42,16 @@ final class FizzyClickGui extends WWidget {
     private String search = "";
     private boolean searchFocused;
     private double scroll;
+    private double targetScroll;
+    private double openProgress;
+    private double selectedCategoryY = -1;
+    private final Map<Module, Double> toggleProgress = new HashMap<>();
+    private final Map<Category, Double> categoryHover = new HashMap<>();
+
+    private static double animate(double current, double target, double speed, double delta) {
+        double factor = 1 - Math.exp(-speed * Math.min(delta, 0.05));
+        return current + (target - current) * factor;
+    }
 
     FizzyClickGui() {
         for (Category category : Modules.loopCategories()) categories.add(category);
@@ -73,7 +85,9 @@ final class FizzyClickGui extends WWidget {
 
     @Override
     protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
-        double px = panelX(), py = panelY(), pw = panelWidth(), ph = panelHeight();
+        openProgress = animate(openProgress, 1, 8.5, delta);
+        scroll = animate(scroll, targetScroll, 12, delta);
+        double px = panelX(), py = panelY() + (1 - openProgress) * theme.scale(34), pw = panelWidth(), ph = panelHeight();
         double side = theme.scale(178);
         double pad = theme.scale(22);
         double rowH = theme.scale(68);
@@ -90,17 +104,23 @@ final class FizzyClickGui extends WWidget {
         renderer.text("MODULES", px + theme.scale(18), py + theme.scale(46), MUTED, false);
 
         double categoryY = py + theme.scale(88);
+        double selectedTargetY = categoryY;
         for (Category category : categories) {
+            if (category.equals(selected)) selectedTargetY = categoryY;
             boolean active = category.equals(selected);
             double bx = px + theme.scale(9);
             double bw = side - theme.scale(18);
             double bh = theme.scale(32);
             boolean hover = mouseX >= bx && mouseX <= bx + bw && mouseY >= categoryY && mouseY <= categoryY + bh;
-            if (active || hover) renderer.quad(bx, categoryY, bw, bh, active ? new Color(48, 39, 99, 255) : CARD_HOVER);
-            if (active) renderer.quad(bx, categoryY, theme.scale(2), bh, PURPLE);
+            double hoverAmount = categoryHover.compute(category, (key, value) -> animate(value == null ? 0 : value, hover ? 1 : 0, 14, delta));
+            if (active || hoverAmount > 0.01) renderer.quad(bx, categoryY, bw, bh, active ? new Color(48, 39, 99, 255) : new Color(19 + (int)(10 * hoverAmount), 21 + (int)(10 * hoverAmount), 42 + (int)(18 * hoverAmount), 255));
+            if (active) renderer.quad(bx, categoryY, theme.scale(3), bh, PURPLE);
             renderer.text(category.name, bx + theme.scale(12), categoryY + theme.scale(8), active ? TEXT : MUTED, false);
             categoryY += theme.scale(40);
         }
+
+        selectedCategoryY = animate(selectedCategoryY < 0 ? selectedTargetY : selectedCategoryY, selectedTargetY, 15, delta);
+        renderer.quad(px + theme.scale(9), selectedCategoryY, theme.scale(3), theme.scale(32), PURPLE);
 
         String heading = selected == null ? "Modules" : selected.name + " Modules";
         renderer.text(heading, contentX, py + theme.scale(23), TEXT, true);
@@ -121,14 +141,20 @@ final class FizzyClickGui extends WWidget {
 
         List<Module> modules = selected == null ? List.of() : Modules.get().getGroup(selected);
         double cardY = listY - scroll;
+        int visibleIndex = 0;
         renderer.scissorStart(contentX, listY, contentW, listBottom - listY);
         for (Module module : modules) {
             if (!search.isEmpty() && !(module.title.toLowerCase(Locale.ROOT).contains(search.toLowerCase(Locale.ROOT))
                 || module.description.toLowerCase(Locale.ROOT).contains(search.toLowerCase(Locale.ROOT)))) continue;
 
+            double entrance = Math.min(1, Math.max(0, (openProgress - visibleIndex * 0.035) / 0.72));
+            double easedEntrance = 1 - Math.pow(1 - entrance, 3);
+            double drawY = cardY + (1 - easedEntrance) * theme.scale(15);
             if (cardY + rowH >= listY && cardY <= listBottom) {
                 boolean hover = mouseX >= contentX && mouseX <= contentX + contentW && mouseY >= cardY && mouseY <= cardY + rowH - theme.scale(5);
-                renderer.quad(contentX, cardY, contentW, rowH - theme.scale(7), hover ? CARD_HOVER : CARD);
+                double hoverAmount = categoryHover.compute(selected, (key, value) -> animate(value == null ? 0 : value, hover ? 1 : 0, 13, delta));
+                double toggleAmount = toggleProgress.compute(module, (key, value) -> animate(value == null ? (module.isActive() ? 1 : 0) : value, module.isActive() ? 1 : 0, 16, delta));
+                renderer.quad(contentX, drawY, contentW, rowH - theme.scale(7), hoverAmount > 0.02 ? new Color(19 + (int)(10 * hoverAmount), 21 + (int)(10 * hoverAmount), 42 + (int)(18 * hoverAmount), 255) : CARD);
 
                 renderer.text(module.title, contentX + theme.scale(13), cardY + theme.scale(13), TEXT, true);
                 String description = module.description == null ? "" : module.description;
@@ -141,10 +167,11 @@ final class FizzyClickGui extends WWidget {
                 double toggleX = contentX + contentW - theme.scale(49);
                 double toggleY = cardY + theme.scale(25);
                 renderer.quad(toggleX, toggleY, theme.scale(29), theme.scale(15), module.isActive() ? PURPLE : OFF);
-                double knobX = module.isActive() ? toggleX + theme.scale(16) : toggleX + theme.scale(2);
+                double knobX = toggleX + theme.scale(2 + 16 * toggleAmount);
                 renderer.quad(knobX, toggleY + theme.scale(3), theme.scale(9), theme.scale(9), TEXT);
             }
             cardY += rowH;
+            visibleIndex++;
         }
 
         renderer.scissorEnd();
@@ -167,11 +194,13 @@ final class FizzyClickGui extends WWidget {
             if (mx >= bx && mx <= bx + bw && my >= categoryY && my <= categoryY + bh) {
                 selected = category;
                 scroll = 0;
+            targetScroll = 0;
+                targetScroll = 0;
                 search = "";
                 searchFocused = false;
                 return true;
             }
-            categoryY += theme.scale(34);
+            categoryY += theme.scale(40);
         }
 
         double searchW = theme.scale(220);
@@ -206,7 +235,7 @@ final class FizzyClickGui extends WWidget {
 
     @Override
     public boolean onMouseScrolled(double amount) {
-        scroll = Math.max(0, scroll - amount * theme.scale(38));
+        targetScroll = Math.max(0, targetScroll - amount * theme.scale(54));
         return true;
     }
 
