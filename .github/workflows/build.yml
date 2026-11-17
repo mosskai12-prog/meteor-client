@@ -61,6 +61,7 @@ jobs:
           retention-days: 14
 
       - name: Discord webhook
+        continue-on-error: true
         run: |
           cd .github/builds
           npm run webhook -- ${{ steps.build-number.outputs.number }} ${{ github.ref_name }} https://api.github.com/repos/MeteorDevelopment/meteor-client/compare/${{ github.event.before }}...${{ github.event.after }} true
