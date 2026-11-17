@@ -63,7 +63,7 @@ public class MeteorGuiTheme extends GuiTheme {
     public final Setting<Double> textSize = sgGeneral.add(new DoubleSetting.Builder()
         .name("text-size")
         .description("Scales all GUI text and its spacing for better readability.")
-        .defaultValue(1.3)
+        .defaultValue(1.5)
         .min(0.8)
         .sliderRange(0.8, 2)
         .build()
