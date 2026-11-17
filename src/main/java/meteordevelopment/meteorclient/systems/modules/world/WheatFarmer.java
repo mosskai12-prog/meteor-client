@@ -13,7 +13,6 @@ import meteordevelopment.meteorclient.settings.Setting;
 import meteordevelopment.meteorclient.settings.SettingGroup;
 import meteordevelopment.meteorclient.systems.modules.Categories;
 import meteordevelopment.meteorclient.systems.modules.Module;
-import meteordevelopment.meteorclient.utils.Utils;
 import meteordevelopment.meteorclient.utils.player.FindItemResult;
 import meteordevelopment.meteorclient.utils.player.InvUtils;
 import meteordevelopment.meteorclient.utils.player.PlayerUtils;
@@ -25,7 +24,6 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.CropBlock;
 import net.minecraft.item.HoeItem;
 import net.minecraft.item.Items;
-import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.BlockPos;
 
 public class WheatFarmer extends Module {
@@ -64,7 +62,6 @@ public class WheatFarmer extends Module {
     );
 
     private int ticks;
-    private int fullInventoryUseTicks;
     private boolean inventoryWasFull;
 
     public WheatFarmer() {
@@ -74,7 +71,6 @@ public class WheatFarmer extends Module {
     @Override
     public void onActivate() {
         ticks = 0;
-        fullInventoryUseTicks = 0;
         inventoryWasFull = false;
     }
 
@@ -144,33 +140,12 @@ public class WheatFarmer extends Module {
             return false;
         }
 
+        // Send /sell once as soon as the inventory becomes full.
         if (!inventoryWasFull) {
             inventoryWasFull = true;
-            // Slot 2 is the wheat stack used for the right-click action.
-            ItemStack secondSlot = mc.player.getInventory().getStack(1);
-            if (!secondSlot.isOf(Items.WHEAT)) return false;
-
-            if (!InvUtils.swap(1, true)) {
-                inventoryWasFull = false;
-                return false;
-            }
-            mc.options.useKey.setPressed(true);
-            Utils.rightClick();
-            fullInventoryUseTicks = 20;
-            return true;
+            mc.getNetworkHandler().sendChatCommand("sell");
         }
 
-        if (fullInventoryUseTicks > 0) {
-            fullInventoryUseTicks--;
-            if (fullInventoryUseTicks == 0) {
-                mc.options.useKey.setPressed(false);
-                // Run the server's sell command after the right-click action.
-                mc.getNetworkHandler().sendChatCommand("sell");
-            }
-            return true;
-        }
-
-        return false;
+        return true;
     }
-
 }
