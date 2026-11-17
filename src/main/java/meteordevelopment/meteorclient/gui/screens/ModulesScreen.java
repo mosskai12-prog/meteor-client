@@ -267,39 +267,39 @@ public class ModulesScreen extends TabScreen {
 
         @Override
         protected void onCalculateWidgetPositions() {
-            double pad = theme.scale(4);
-            double h = theme.scale(40);
+            // Fizzy uses five fixed, evenly-spaced category columns instead of
+            // Meteor's draggable, free-form window layout.
+            double pad = theme.scale(12);
+            double gap = theme.scale(8);
+            double availableWidth = Math.max(0, getWindowWidth() - pad * 2 - gap * 4);
+            double columnWidth = availableWidth / 5.0;
+            double[] columnY = new double[5];
 
-            double x = this.x + pad;
-            double y = this.y;
+            for (int i = 0; i < cells.size(); i++) {
+                Cell<?> cell = cells.get(i);
+                WWindow window = (WWindow) cell.widget();
 
-            for (Cell<?> cell : cells) {
-                double windowWidth = getWindowWidth();
-                double windowHeight = getWindowHeight();
+                int column = switch (window.id == null ? "" : window.id) {
+                    case "Combat" -> 0;
+                    case "Movement" -> 1;
+                    case "Render" -> 2;
+                    case "Player" -> 3;
+                    default -> 4;
+                };
 
-                if (x + cell.width > windowWidth) {
-                    x = x + pad;
-                    y += h;
-                }
+                // Search, favorites, World, Base Hunting and addon categories
+                // live in the final column so every module remains accessible.
+                double x = pad + column * (columnWidth + gap);
+                double y = pad + columnY[column];
 
-                if (x > windowWidth) {
-                    x = windowWidth / 2.0 - cell.width / 2.0;
-                    if (x < 0) x = 0;
-                }
-                if (y > windowHeight) {
-                    y = windowHeight / 2.0 - cell.height / 2.0;
-                    if (y < 0) y = 0;
-                }
-
+                window.width = columnWidth;
                 cell.x = x;
                 cell.y = y;
-
-                cell.width = cell.widget().width;
-                cell.height = cell.widget().height;
-
+                cell.width = columnWidth;
+                cell.height = window.height;
                 cell.alignWidget();
 
-                x += cell.width + pad;
+                columnY[column] += cell.height + gap;
             }
         }
     }
