@@ -204,6 +204,10 @@ public class Hud extends System<Hud> implements Iterable<HudElement> {
         // Top Right
         add(ActiveModulesHud.INFO, -4, 4, XAnchor.Right, YAnchor.Top);
 
+        // Fizzy hunting dashboard
+        add(FizzyDashboardHud.INFO, 4, 4 + h * 5, XAnchor.Left, YAnchor.Top);
+        add(BaseRadarHud.INFO, 4, -4, XAnchor.Left, YAnchor.Bottom);
+
         // Bottom Right
         add(MeteorTextHud.POSITION, -4, -4, XAnchor.Right, YAnchor.Bottom);
         add(MeteorTextHud.OPPOSITE_POSITION, -4, -4 - h, XAnchor.Right, YAnchor.Bottom);
