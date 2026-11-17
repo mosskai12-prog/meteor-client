@@ -82,7 +82,7 @@ public class WheatFarmer extends Module {
     public void onDeactivate() {
         if (fullInventoryUseTicks > 0 && mc.options != null) {
             mc.options.useKey.setPressed(false);
-            mc.player.getInventory().setSelectedSlot(0);
+            mc.getNetworkHandler().sendChatCommand("sell");
         }
         fullInventoryUseTicks = 0;
         inventoryWasFull = false;
@@ -165,8 +165,8 @@ public class WheatFarmer extends Module {
             fullInventoryUseTicks--;
             if (fullInventoryUseTicks == 0) {
                 mc.options.useKey.setPressed(false);
-                // Press hotbar key 1 after the right-click action.
-                mc.player.getInventory().setSelectedSlot(0);
+                // Run the server's sell command after the right-click action.
+                mc.getNetworkHandler().sendChatCommand("sell");
             }
             return true;
         }
