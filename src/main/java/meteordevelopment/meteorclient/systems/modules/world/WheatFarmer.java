@@ -13,14 +13,19 @@ import meteordevelopment.meteorclient.settings.Setting;
 import meteordevelopment.meteorclient.settings.SettingGroup;
 import meteordevelopment.meteorclient.systems.modules.Categories;
 import meteordevelopment.meteorclient.systems.modules.Module;
+import meteordevelopment.meteorclient.utils.Utils;
 import meteordevelopment.meteorclient.utils.player.FindItemResult;
 import meteordevelopment.meteorclient.utils.player.InvUtils;
 import meteordevelopment.meteorclient.utils.player.PlayerUtils;
+import meteordevelopment.meteorclient.utils.player.Rotations;
+import meteordevelopment.meteorclient.utils.player.SlotUtils;
 import meteordevelopment.meteorclient.utils.world.BlockUtils;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.CropBlock;
+import net.minecraft.item.HoeItem;
 import net.minecraft.item.Items;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.BlockPos;
 
 public class WheatFarmer extends Module {
@@ -59,6 +64,9 @@ public class WheatFarmer extends Module {
     );
 
     private int ticks;
+    private int fullInventoryUseTicks;
+    private boolean inventoryWasFull;
+    private int returnSlot;
 
     public WheatFarmer() {
         super(Categories.World, "wheat-farmer", "Automatically harvests nearby mature wheat and replants it.");
@@ -67,11 +75,22 @@ public class WheatFarmer extends Module {
     @Override
     public void onActivate() {
         ticks = 0;
+        fullInventoryUseTicks = 0;
+        inventoryWasFull = false;
+    }
+
+    @Override
+    public void onDeactivate() {
+        if (fullInventoryUseTicks > 0 && mc.options != null) mc.options.useKey.setPressed(false);
+        fullInventoryUseTicks = 0;
     }
 
     @EventHandler
     private void onTick(TickEvent.Pre event) {
         if (mc.player == null || mc.world == null || mc.interactionManager == null) return;
+
+        if (handleFullInventory()) return;
+
         if (++ticks < actionDelay.get()) return;
         ticks = 0;
 
@@ -86,7 +105,8 @@ public class WheatFarmer extends Module {
             if (mc.world.getBlockState(pos).get(CropBlock.AGE) < CropBlock.MAX_AGE) continue;
             if (!PlayerUtils.isWithinReach(pos)) continue;
 
-            BlockUtils.breakBlock(pos, swingHand.get());
+            // Turn toward the crop before sending the harvest action.
+            Rotations.rotate(Rotations.getYaw(pos), Rotations.getPitch(pos), () -> BlockUtils.breakBlock(pos, swingHand.get()));
             return;
         }
 
@@ -105,6 +125,67 @@ public class WheatFarmer extends Module {
 
             BlockUtils.place(pos, seeds, true, 0, swingHand.get());
             return;
+        }
+    }
+
+    private boolean handleFullInventory() {
+        boolean full = true;
+        for (int i = 0; i < mc.player.getInventory().size(); i++) {
+            if (mc.player.getInventory().getStack(i).isEmpty()) {
+                full = false;
+                break;
+            }
+        }
+
+        if (!full) {
+            inventoryWasFull = false;
+            return false;
+        }
+
+        if (!inventoryWasFull) {
+            inventoryWasFull = true;
+            returnSlot = mc.player.getInventory().getSelectedSlot();
+
+            // Slot 2 is the wheat stack used for the right-click action.
+            ItemStack secondSlot = mc.player.getInventory().getStack(1);
+            if (!secondSlot.isOf(Items.WHEAT)) return false;
+
+            InvUtils.swap(1, false);
+            mc.options.useKey.setPressed(true);
+            Utils.rightClick();
+            fullInventoryUseTicks = 20;
+            return true;
+        }
+
+        if (fullInventoryUseTicks > 0) {
+            fullInventoryUseTicks--;
+            if (fullInventoryUseTicks == 0) {
+                mc.options.useKey.setPressed(false);
+                switchBackToHoe();
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    private void switchBackToHoe() {
+        int hoeSlot = -1;
+        for (int i = 0; i < mc.player.getInventory().size(); i++) {
+            if (mc.player.getInventory().getStack(i).getItem() instanceof HoeItem) {
+                hoeSlot = i;
+                break;
+            }
+        }
+
+        if (hoeSlot >= 0 && hoeSlot <= 8) {
+            InvUtils.swap(hoeSlot, false);
+        } else if (hoeSlot >= 9 && hoeSlot < 36) {
+            // Put the hoe into the previously selected hotbar slot, swapping its item back into the inventory.
+            InvUtils.quickSwap().from(hoeSlot).toHotbar(returnSlot);
+            InvUtils.swap(returnSlot, false);
+        } else {
+            InvUtils.swap(returnSlot, false);
         }
     }
 }
