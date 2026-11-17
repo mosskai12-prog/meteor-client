@@ -28,9 +28,9 @@ public class Categories {
         Modules.registerCategory(Player);
         Modules.registerCategory(Movement);
         Modules.registerCategory(Render);
+        Modules.registerCategory(BaseHunting);
         Modules.registerCategory(World);
         Modules.registerCategory(Misc);
-        Modules.registerCategory(BaseHunting);
 
         // Addons
         AddonManager.ADDONS.forEach(MeteorAddon::onRegisterCategories);
