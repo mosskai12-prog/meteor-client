@@ -17,12 +17,10 @@ import meteordevelopment.meteorclient.utils.player.FindItemResult;
 import meteordevelopment.meteorclient.utils.player.InvUtils;
 import meteordevelopment.meteorclient.utils.player.PlayerUtils;
 import meteordevelopment.meteorclient.utils.player.Rotations;
-import meteordevelopment.meteorclient.utils.player.SlotUtils;
 import meteordevelopment.meteorclient.utils.world.BlockUtils;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.CropBlock;
-import net.minecraft.item.HoeItem;
 import net.minecraft.item.Items;
 import net.minecraft.util.math.BlockPos;
 
@@ -62,7 +60,6 @@ public class WheatFarmer extends Module {
     );
 
     private int ticks;
-    private boolean inventoryWasFull;
 
     public WheatFarmer() {
         super(Categories.World, "wheat-farmer", "Automatically harvests nearby mature wheat and replants it.");
@@ -71,7 +68,6 @@ public class WheatFarmer extends Module {
     @Override
     public void onActivate() {
         ticks = 0;
-        inventoryWasFull = false;
     }
 
     @Override
@@ -82,8 +78,6 @@ public class WheatFarmer extends Module {
     @EventHandler
     private void onTick(TickEvent.Pre event) {
         if (mc.player == null || mc.world == null || mc.interactionManager == null) return;
-
-        if (handleFullInventory()) return;
 
         if (++ticks < actionDelay.get()) return;
         ticks = 0;
@@ -122,26 +116,4 @@ public class WheatFarmer extends Module {
         }
     }
 
-    private boolean handleFullInventory() {
-        boolean full = true;
-        for (int i = 0; i < 36; i++) {
-            if (mc.player.getInventory().getStack(i).isEmpty()) {
-                full = false;
-                break;
-            }
-        }
-
-        if (!full) {
-            inventoryWasFull = false;
-            return false;
-        }
-
-        // Send /sell once as soon as the inventory becomes full.
-        if (!inventoryWasFull) {
-            inventoryWasFull = true;
-            mc.getNetworkHandler().sendChatCommand("sell");
-        }
-
-        return true;
-    }
 }
