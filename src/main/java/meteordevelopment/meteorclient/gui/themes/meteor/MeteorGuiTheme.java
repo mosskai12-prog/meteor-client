@@ -60,6 +60,15 @@ public class MeteorGuiTheme extends GuiTheme {
         .build()
     );
 
+    public final Setting<Double> textSize = sgGeneral.add(new DoubleSetting.Builder()
+        .name("text-size")
+        .description("Scales all GUI text and its spacing for better readability.")
+        .defaultValue(1.3)
+        .min(0.8)
+        .sliderRange(0.8, 2)
+        .build()
+    );
+
     public final Setting<AlignmentX> moduleAlignment = sgGeneral.add(new EnumSetting.Builder<AlignmentX>()
         .name("module-alignment")
         .description("How module titles are aligned.")
@@ -373,7 +382,7 @@ public class MeteorGuiTheme extends GuiTheme {
 
     @Override
     public double scale(double value) {
-        double scaled = value * scale.get();
+        double scaled = value * scale.get() * textSize.get();
 
         if (SystemUtils.IS_OS_MAC) {
             scaled /= (double) mc.getWindow().getWidth() / mc.getWindow().getWidth();
