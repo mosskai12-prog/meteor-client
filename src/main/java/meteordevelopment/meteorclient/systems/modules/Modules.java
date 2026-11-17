@@ -554,6 +554,7 @@ public class Modules extends System<Modules> {
         add(new PacketMine());
         add(new StashFinder());
         add(new SoundDetector());
+        add(new WheatFarmer());
         add(new SpawnProofer());
         add(new Timer());
         add(new VeinMiner());
