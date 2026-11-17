@@ -8,7 +8,6 @@ package meteordevelopment.meteorclient.gui.screens;
 import meteordevelopment.meteorclient.gui.GuiTheme;
 import meteordevelopment.meteorclient.gui.tabs.TabScreen;
 import meteordevelopment.meteorclient.gui.tabs.Tabs;
-import meteordevelopment.meteorclient.gui.utils.Cell;
 import meteordevelopment.meteorclient.gui.widgets.containers.WHorizontalList;
 import meteordevelopment.meteorclient.gui.widgets.containers.WVerticalList;
 import meteordevelopment.meteorclient.gui.widgets.containers.WWindow;
@@ -22,11 +21,9 @@ import meteordevelopment.meteorclient.systems.modules.Modules;
 import meteordevelopment.meteorclient.utils.misc.NbtUtils;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.client.util.MacWindowUtil;
-import net.minecraft.nbt.NbtCompound;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import static meteordevelopment.meteorclient.utils.Utils.getWindowHeight;
 import static org.lwjgl.glfw.GLFW.*;
