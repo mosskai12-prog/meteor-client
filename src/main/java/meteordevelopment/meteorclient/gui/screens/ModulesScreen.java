@@ -5,7 +5,6 @@
 
 package meteordevelopment.meteorclient.gui.screens;
 
-import com.mojang.datafixers.util.Pair;
 import meteordevelopment.meteorclient.gui.GuiTheme;
 import meteordevelopment.meteorclient.gui.tabs.TabScreen;
 import meteordevelopment.meteorclient.gui.tabs.Tabs;
@@ -20,20 +19,18 @@ import meteordevelopment.meteorclient.systems.modules.Category;
 import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.systems.modules.Modules;
 import meteordevelopment.meteorclient.utils.misc.NbtUtils;
-import meteordevelopment.meteorclient.utils.misc.input.Input;
-import meteordevelopment.meteorclient.utils.render.DisplayItemUtils;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.world.item.Items;
-import org.apache.commons.lang3.SystemUtils;
-import org.jspecify.annotations.NonNull;
+import net.minecraft.client.input.KeyInput;
+import net.minecraft.client.util.MacWindowUtil;
+import net.minecraft.item.Items;
+import net.minecraft.util.Pair;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import static com.mojang.blaze3d.platform.InputConstants.*;
 import static meteordevelopment.meteorclient.utils.Utils.getWindowHeight;
 import static meteordevelopment.meteorclient.utils.Utils.getWindowWidth;
+import static org.lwjgl.glfw.GLFW.*;
 
 public class ModulesScreen extends TabScreen {
     private WCategoryController controller;
@@ -49,11 +46,9 @@ public class ModulesScreen extends TabScreen {
         controller = add(new WCategoryController()).widget();
 
         // Help
-        if (theme.modulesHelpText()) {
-            WVerticalList help = add(theme.verticalList()).pad(4).bottom().widget();
-            help.add(theme.label("Left click - Toggle module"));
-            help.add(theme.label("Right click - Open module settings"));
-        }
+        WVerticalList help = add(theme.verticalList()).pad(4).bottom().widget();
+        help.add(theme.label("Left click - Toggle module"));
+        help.add(theme.label("Right click - Open module settings"));
     }
 
     @Override
@@ -71,7 +66,7 @@ public class ModulesScreen extends TabScreen {
         w.spacing = 0;
 
         if (theme.categoryIcons()) {
-            w.beforeHeaderInit = wContainer -> wContainer.add(theme.item(category.icon.get())).pad(2);
+            w.beforeHeaderInit = wContainer -> wContainer.add(theme.item(category.icon)).pad(2);
         }
 
         c.add(w);
@@ -100,7 +95,7 @@ public class ModulesScreen extends TabScreen {
                 int count = 0;
                 for (Pair<Module, String> p : modules) {
                     if (count >= Config.get().moduleSearchCount.get() || count >= modules.size()) break;
-                    section.add(theme.module(p.getFirst(), p.getSecond())).expandX();
+                    section.add(theme.module(p.getLeft(), p.getRight())).expandX();
                     count++;
                 }
             }
@@ -128,7 +123,7 @@ public class ModulesScreen extends TabScreen {
         searchWindow = w;
 
         if (theme.categoryIcons()) {
-            w.beforeHeaderInit = wContainer -> wContainer.add(theme.item(DisplayItemUtils.toStack(Items.COMPASS))).pad(2);
+            w.beforeHeaderInit = wContainer -> wContainer.add(theme.item(Items.COMPASS.getDefaultStack())).pad(2);
         }
 
         c.add(w);
@@ -153,14 +148,12 @@ public class ModulesScreen extends TabScreen {
     }
 
     @Override
-    public boolean keyPressed(@NonNull KeyEvent input) {
+    public boolean keyPressed(KeyInput value) {
         if (locked) return false;
 
-        boolean ctrl = SystemUtils.IS_OS_MAC
-            ? Input.modsMatch(input.modifiers(), MOD_SUPER)
-            : Input.modsMatch(input.modifiers(), MOD_CONTROL);
+        boolean cntrl = MacWindowUtil.IS_MAC ? value.modifiers() == GLFW_MOD_SUPER : value.modifiers() == GLFW_MOD_CONTROL;
 
-        if (ctrl && input.key() == KEY_F) {
+        if (cntrl && value.key() == GLFW_KEY_F) {
             if (searchWindow != null) searchWindow.setExpanded(true);
             if (searchTextBox != null) {
                 searchTextBox.setFocused(true);
@@ -170,7 +163,7 @@ public class ModulesScreen extends TabScreen {
             return true;
         }
 
-        return super.keyPressed(input);
+        return super.keyPressed(value);
     }
 
     // Favorites
@@ -185,7 +178,7 @@ public class ModulesScreen extends TabScreen {
         w.spacing = 0;
 
         if (theme.categoryIcons()) {
-            w.beforeHeaderInit = wContainer -> wContainer.add(theme.item(DisplayItemUtils.toStack(Items.NETHER_STAR))).pad(2);
+            w.beforeHeaderInit = wContainer -> wContainer.add(theme.item(Items.NETHER_STAR.getDefaultStack())).pad(2);
         }
 
         Cell<WWindow> cell = c.add(w);
@@ -274,39 +267,39 @@ public class ModulesScreen extends TabScreen {
 
         @Override
         protected void onCalculateWidgetPositions() {
-            double pad = theme.scale(4);
-            double h = theme.scale(40);
+            // Fizzy uses five fixed, evenly-spaced category columns instead of
+            // Meteor's draggable, free-form window layout.
+            double pad = theme.scale(12);
+            double gap = theme.scale(8);
+            double availableWidth = Math.max(0, getWindowWidth() - pad * 2 - gap * 4);
+            double columnWidth = availableWidth / 5.0;
+            double[] columnY = new double[5];
 
-            double x = this.x + pad;
-            double y = this.y;
+            for (int i = 0; i < cells.size(); i++) {
+                Cell<?> cell = cells.get(i);
+                WWindow window = (WWindow) cell.widget();
 
-            for (Cell<?> cell : cells) {
-                double windowWidth = getWindowWidth();
-                double windowHeight = getWindowHeight();
+                int column = switch (window.id == null ? "" : window.id) {
+                    case "Combat" -> 0;
+                    case "Movement" -> 1;
+                    case "Render" -> 2;
+                    case "Player" -> 3;
+                    default -> 4;
+                };
 
-                if (x + cell.width > windowWidth) {
-                    x = x + pad;
-                    y += h;
-                }
+                // Search, favorites, World, Base Hunting and addon categories
+                // live in the final column so every module remains accessible.
+                double x = pad + column * (columnWidth + gap);
+                double y = pad + columnY[column];
 
-                if (x > windowWidth) {
-                    x = windowWidth / 2.0 - cell.width / 2.0;
-                    if (x < 0) x = 0;
-                }
-                if (y > windowHeight) {
-                    y = windowHeight / 2.0 - cell.height / 2.0;
-                    if (y < 0) y = 0;
-                }
-
+                window.width = columnWidth;
                 cell.x = x;
                 cell.y = y;
-
-                cell.width = cell.widget().width;
-                cell.height = cell.widget().height;
-
+                cell.width = columnWidth;
+                cell.height = window.height;
                 cell.alignWidget();
 
-                x += cell.width + pad;
+                columnY[column] += cell.height + gap;
             }
         }
     }
