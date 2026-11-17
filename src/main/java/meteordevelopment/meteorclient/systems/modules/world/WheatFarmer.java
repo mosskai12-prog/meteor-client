@@ -70,11 +70,6 @@ public class WheatFarmer extends Module {
         ticks = 0;
     }
 
-    @Override
-    public void onDeactivate() {
-        inventoryWasFull = false;
-    }
-
     @EventHandler
     private void onTick(TickEvent.Pre event) {
         if (mc.player == null || mc.world == null || mc.interactionManager == null) return;
