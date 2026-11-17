@@ -100,7 +100,7 @@ public class SoundDetector extends Module {
         if (label == null) return;
 
         Vec3d soundPos = new Vec3d(event.sound.getX(), event.sound.getY(), event.sound.getZ());
-        double distance = mc.player.getPos().distanceTo(soundPos);
+        double distance = new Vec3d(mc.player.getX(), mc.player.getY(), mc.player.getZ()).distanceTo(soundPos);
         if (distance > range.get()) return;
 
         long now = java.lang.System.currentTimeMillis();
