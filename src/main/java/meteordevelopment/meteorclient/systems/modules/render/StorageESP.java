@@ -147,6 +147,15 @@ public class StorageESP extends Module {
         .build()
     );
 
+    private final Setting<Double> maxDistance = sgGeneral.add(new DoubleSetting.Builder()
+        .name("max-distance")
+        .description("Maximum distance to render loaded storage blocks.")
+        .defaultValue(128)
+        .min(16)
+        .sliderMax(512)
+        .build()
+    );
+
     private final Setting<Double> fadeDistance = sgGeneral.add(new DoubleSetting.Builder()
         .name("fade-distance")
         .description("The distance at which the color will fade.")
@@ -262,6 +271,8 @@ public class StorageESP extends Module {
 
             if (render) {
                 double dist = PlayerUtils.squaredDistanceTo(blockEntity.getPos().getX() + 0.5, blockEntity.getPos().getY() + 0.5, blockEntity.getPos().getZ() + 0.5);
+                if (dist > maxDistance.get() * maxDistance.get()) continue;
+
                 double a = 1;
                 if (dist <= fadeDistance.get() * fadeDistance.get()) a = dist / (fadeDistance.get() * fadeDistance.get());
 
