@@ -20,39 +20,28 @@ import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT;
 public class WMeteorModule extends WPressable implements MeteorWidget {
     private final Module module;
     private final String title;
-
     private double titleWidth;
-
     private double animationProgress1;
-
     private double animationProgress2;
 
     public WMeteorModule(Module module, String title) {
         this.module = module;
         this.title = title;
         this.tooltip = module.description;
-
-        if (module.isActive()) {
-            animationProgress1 = 1;
-            animationProgress2 = 1;
-        } else {
-            animationProgress1 = 0;
-            animationProgress2 = 0;
-        }
+        animationProgress1 = module.isActive() ? 1 : 0;
+        animationProgress2 = module.isActive() ? 1 : 0;
     }
 
     @Override
     public double pad() {
-        return theme.scale(6);
+        return theme.scale(7);
     }
 
     @Override
     protected void onCalculateSize() {
         double pad = pad();
-
         if (titleWidth == 0) titleWidth = theme.textWidth(title);
-
-        width = pad + titleWidth + pad;
+        width = pad + titleWidth + pad + theme.scale(12);
         height = pad + theme.textHeight() + pad;
     }
 
@@ -67,29 +56,28 @@ public class WMeteorModule extends WPressable implements MeteorWidget {
         MeteorGuiTheme theme = theme();
         double pad = pad();
 
-        animationProgress1 += delta * 4 * ((module.isActive() || mouseOver) ? 1 : -1);
-        animationProgress1 = MathHelper.clamp(animationProgress1, 0, 1);
+        animationProgress1 = MathHelper.clamp(animationProgress1 + delta * 5 * ((module.isActive() || mouseOver) ? 1 : -1), 0, 1);
+        animationProgress2 = MathHelper.clamp(animationProgress2 + delta * 7 * (module.isActive() ? 1 : -1), 0, 1);
 
-        animationProgress2 += delta * 6 * (module.isActive() ? 1 : -1);
-        animationProgress2 = MathHelper.clamp(animationProgress2, 0, 1);
-
-        if (animationProgress1 > 0) {
-            renderer.quad(x, y, width * animationProgress1, height, theme.moduleBackground.get());
+        if (mouseOver || animationProgress1 > 0) {
+            int alpha = (int) (18 + 30 * animationProgress1);
+            renderer.quad(x, y, width, height, new meteordevelopment.meteorclient.utils.render.color.Color(111, 103, 255, alpha));
         }
+
         if (animationProgress2 > 0) {
-            renderer.quad(x, y + height * (1 - animationProgress2), theme.scale(2), height * animationProgress2, theme.accentColor.get());
+            renderer.quad(x, y, theme.scale(2), height, theme.accentColor.get());
         }
 
-        double x = this.x + pad;
-        double w = width - pad * 2;
+        double labelX = x + pad;
+        double availableWidth = width - pad * 2;
+        if (theme.moduleAlignment.get() == AlignmentX.Center) labelX += availableWidth / 2 - titleWidth / 2;
+        else if (theme.moduleAlignment.get() == AlignmentX.Right) labelX += availableWidth - titleWidth;
 
-        if (theme.moduleAlignment.get() == AlignmentX.Center) {
-            x += w / 2 - titleWidth / 2;
-        }
-        else if (theme.moduleAlignment.get() == AlignmentX.Right) {
-            x += w - titleWidth;
-        }
+        renderer.text(title, labelX, y + pad, module.isActive() ? theme.textColor.get() : theme.textSecondaryColor.get(), false);
 
-        renderer.text(title, x, y + pad, theme.textColor.get(), false);
+        double dotSize = theme.scale(5);
+        double dotX = x + width - pad - dotSize;
+        double dotY = y + height / 2 - dotSize / 2;
+        renderer.quad(dotX, dotY, dotSize, dotSize, module.isActive() ? theme.accentColor.get() : theme.outlineColor.get());
     }
 }
