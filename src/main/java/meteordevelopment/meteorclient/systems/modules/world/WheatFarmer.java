@@ -66,7 +66,6 @@ public class WheatFarmer extends Module {
     private int ticks;
     private int fullInventoryUseTicks;
     private boolean inventoryWasFull;
-    private int returnSlot;
 
     public WheatFarmer() {
         super(Categories.World, "wheat-farmer", "Automatically harvests nearby mature wheat and replants it.");
@@ -83,8 +82,7 @@ public class WheatFarmer extends Module {
     public void onDeactivate() {
         if (fullInventoryUseTicks > 0 && mc.options != null) {
             mc.options.useKey.setPressed(false);
-            InvUtils.swapBack();
-            switchBackToHoe();
+            mc.player.getInventory().setSelectedSlot(0);
         }
         fullInventoryUseTicks = 0;
         inventoryWasFull = false;
@@ -149,8 +147,6 @@ public class WheatFarmer extends Module {
 
         if (!inventoryWasFull) {
             inventoryWasFull = true;
-            returnSlot = mc.player.getInventory().getSelectedSlot();
-
             // Slot 2 is the wheat stack used for the right-click action.
             ItemStack secondSlot = mc.player.getInventory().getStack(1);
             if (!secondSlot.isOf(Items.WHEAT)) return false;
@@ -169,10 +165,8 @@ public class WheatFarmer extends Module {
             fullInventoryUseTicks--;
             if (fullInventoryUseTicks == 0) {
                 mc.options.useKey.setPressed(false);
-                // First restore the slot that was selected before using slot 2.
-                InvUtils.swapBack();
-                // Then select the hoe so farming can continue with the correct tool.
-                switchBackToHoe();
+                // Press hotbar key 1 after the right-click action.
+                mc.player.getInventory().setSelectedSlot(0);
             }
             return true;
         }
@@ -180,24 +174,4 @@ public class WheatFarmer extends Module {
         return false;
     }
 
-    private void switchBackToHoe() {
-        int hoeSlot = -1;
-        for (int i = 0; i < mc.player.getInventory().size(); i++) {
-            if (mc.player.getInventory().getStack(i).getItem() instanceof HoeItem) {
-                hoeSlot = i;
-                break;
-            }
-        }
-
-        if (hoeSlot >= 0 && hoeSlot <= 8) {
-            InvUtils.swap(hoeSlot, false);
-        } else if (hoeSlot >= 9 && hoeSlot < 36) {
-            // Put the hoe into the previously selected hotbar slot, swapping its item back into the inventory.
-            InvUtils.quickSwap().from(hoeSlot).toHotbar(returnSlot);
-            InvUtils.swap(returnSlot, false);
-        } else {
-            // No hoe was found; at least restore the player's original selected slot.
-            InvUtils.swap(returnSlot, false);
-        }
-    }
 }
