@@ -81,8 +81,13 @@ public class WheatFarmer extends Module {
 
     @Override
     public void onDeactivate() {
-        if (fullInventoryUseTicks > 0 && mc.options != null) mc.options.useKey.setPressed(false);
+        if (fullInventoryUseTicks > 0 && mc.options != null) {
+            mc.options.useKey.setPressed(false);
+            InvUtils.swapBack();
+            switchBackToHoe();
+        }
         fullInventoryUseTicks = 0;
+        inventoryWasFull = false;
     }
 
     @EventHandler
@@ -150,7 +155,10 @@ public class WheatFarmer extends Module {
             ItemStack secondSlot = mc.player.getInventory().getStack(1);
             if (!secondSlot.isOf(Items.WHEAT)) return false;
 
-            InvUtils.swap(1, false);
+            if (!InvUtils.swap(1, true)) {
+                inventoryWasFull = false;
+                return false;
+            }
             mc.options.useKey.setPressed(true);
             Utils.rightClick();
             fullInventoryUseTicks = 20;
@@ -161,6 +169,9 @@ public class WheatFarmer extends Module {
             fullInventoryUseTicks--;
             if (fullInventoryUseTicks == 0) {
                 mc.options.useKey.setPressed(false);
+                // First restore the slot that was selected before using slot 2.
+                InvUtils.swapBack();
+                // Then select the hoe so farming can continue with the correct tool.
                 switchBackToHoe();
             }
             return true;
@@ -185,6 +196,7 @@ public class WheatFarmer extends Module {
             InvUtils.quickSwap().from(hoeSlot).toHotbar(returnSlot);
             InvUtils.swap(returnSlot, false);
         } else {
+            // No hoe was found; at least restore the player's original selected slot.
             InvUtils.swap(returnSlot, false);
         }
     }
