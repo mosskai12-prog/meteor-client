@@ -18,7 +18,7 @@ public class ModulesScreen extends TabScreen {
 
     @Override
     public void initWidgets() {
-        add(new FizzyClickGui()).expand();
+        add(new FizzyClickGui()).expandWidgetX().expandWidgetY();
     }
 
     @Override
