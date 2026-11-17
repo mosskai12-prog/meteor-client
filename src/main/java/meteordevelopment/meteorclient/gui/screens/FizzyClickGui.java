@@ -61,11 +61,11 @@ final class FizzyClickGui extends WWidget {
     }
 
     private double panelWidth() {
-        return Math.min(theme.scale(760), width - theme.scale(28));
+        return Math.min(theme.scale(900), width - theme.scale(32));
     }
 
     private double panelHeight() {
-        return Math.min(theme.scale(500), height - theme.scale(28));
+        return Math.min(theme.scale(590), height - theme.scale(32));
     }
 
     private double panelX() { return x + (width - panelWidth()) / 2; }
@@ -74,78 +74,80 @@ final class FizzyClickGui extends WWidget {
     @Override
     protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
         double px = panelX(), py = panelY(), pw = panelWidth(), ph = panelHeight();
-        double side = theme.scale(154);
-        double pad = theme.scale(15);
-        double rowH = theme.scale(48);
+        double side = theme.scale(178);
+        double pad = theme.scale(22);
+        double rowH = theme.scale(68);
         double contentX = px + side + pad;
         double contentW = pw - side - pad * 2;
-        double listY = py + theme.scale(104);
-        double listBottom = py + ph - theme.scale(18);
+        double listY = py + theme.scale(116);
+        double listBottom = py + ph - theme.scale(22);
 
         renderer.quad(px, py, pw, ph, PANEL);
         renderer.quad(px, py, side, ph, SIDEBAR);
         renderer.quad(px + side - 1, py + theme.scale(12), 1, ph - theme.scale(24), new Color(48, 46, 83, 255));
 
-        renderer.text("FIZZY CLIENT", px + theme.scale(18), py + theme.scale(17), TEXT, true);
-        renderer.text("MODULES", px + theme.scale(18), py + theme.scale(38), MUTED, false);
+        renderer.text("FIZZY CLIENT", px + theme.scale(18), py + theme.scale(22), TEXT, true);
+        renderer.text("MODULES", px + theme.scale(18), py + theme.scale(46), MUTED, false);
 
-        double categoryY = py + theme.scale(78);
+        double categoryY = py + theme.scale(88);
         for (Category category : categories) {
             boolean active = category.equals(selected);
             double bx = px + theme.scale(9);
             double bw = side - theme.scale(18);
-            double bh = theme.scale(27);
+            double bh = theme.scale(32);
             boolean hover = mouseX >= bx && mouseX <= bx + bw && mouseY >= categoryY && mouseY <= categoryY + bh;
             if (active || hover) renderer.quad(bx, categoryY, bw, bh, active ? new Color(48, 39, 99, 255) : CARD_HOVER);
             if (active) renderer.quad(bx, categoryY, theme.scale(2), bh, PURPLE);
             renderer.text(category.name, bx + theme.scale(12), categoryY + theme.scale(8), active ? TEXT : MUTED, false);
-            categoryY += theme.scale(34);
+            categoryY += theme.scale(40);
         }
 
         String heading = selected == null ? "Modules" : selected.name + " Modules";
-        renderer.text(heading, contentX, py + theme.scale(18), TEXT, true);
+        renderer.text(heading, contentX, py + theme.scale(23), TEXT, true);
 
         int total = selected == null ? 0 : Modules.get().getGroup(selected).size();
         int enabled = 0;
         if (selected != null) for (Module module : Modules.get().getGroup(selected)) if (module.isActive()) enabled++;
-        renderer.text(enabled + " enabled  •  " + total + " modules", contentX, py + theme.scale(42), MUTED, false);
+        renderer.text(enabled + " enabled  •  " + total + " modules", contentX, py + theme.scale(50), MUTED, false);
 
-        double searchY = py + theme.scale(16);
-        double searchW = theme.scale(185);
+        double searchY = py + theme.scale(21);
+        double searchW = theme.scale(220);
         double searchX = px + pw - searchW - theme.scale(18);
-        renderer.quad(searchX, searchY, searchW, theme.scale(29), new Color(22, 24, 45, 255));
-        renderer.text((search.isEmpty() ? "⌕  Search modules" : "⌕  " + search), searchX + theme.scale(10), searchY + theme.scale(9), search.isEmpty() ? MUTED : TEXT, false);
-        if (searchFocused) renderer.quad(searchX, searchY + theme.scale(28), searchW, theme.scale(1), PURPLE);
+        renderer.quad(searchX, searchY, searchW, theme.scale(34), new Color(22, 24, 45, 255));
+        renderer.text((search.isEmpty() ? "⌕  Search modules" : "⌕  " + search), searchX + theme.scale(12), searchY + theme.scale(11), search.isEmpty() ? MUTED : TEXT, false);
+        if (searchFocused) renderer.quad(searchX, searchY + theme.scale(33), searchW, theme.scale(1), PURPLE);
 
-        renderer.text("AVAILABLE MODULES", contentX, py + theme.scale(78), MUTED, false);
+        renderer.text("AVAILABLE MODULES", contentX, py + theme.scale(88), MUTED, false);
 
         List<Module> modules = selected == null ? List.of() : Modules.get().getGroup(selected);
         double cardY = listY - scroll;
+        renderer.scissorStart(contentX, listY, contentW, listBottom - listY);
         for (Module module : modules) {
             if (!search.isEmpty() && !(module.title.toLowerCase(Locale.ROOT).contains(search.toLowerCase(Locale.ROOT))
                 || module.description.toLowerCase(Locale.ROOT).contains(search.toLowerCase(Locale.ROOT)))) continue;
 
             if (cardY + rowH >= listY && cardY <= listBottom) {
                 boolean hover = mouseX >= contentX && mouseX <= contentX + contentW && mouseY >= cardY && mouseY <= cardY + rowH - theme.scale(5);
-                renderer.quad(contentX, cardY, contentW, rowH - theme.scale(5), hover ? CARD_HOVER : CARD);
+                renderer.quad(contentX, cardY, contentW, rowH - theme.scale(7), hover ? CARD_HOVER : CARD);
 
-                renderer.text(module.title, contentX + theme.scale(13), cardY + theme.scale(9), TEXT, true);
+                renderer.text(module.title, contentX + theme.scale(13), cardY + theme.scale(13), TEXT, true);
                 String description = module.description == null ? "" : module.description;
-                if (description.length() > 78) description = description.substring(0, 75) + "...";
-                renderer.text(description, contentX + theme.scale(13), cardY + theme.scale(28), MUTED, false);
+                if (description.length() > 58) description = description.substring(0, 55) + "...";
+                renderer.text(description, contentX + theme.scale(13), cardY + theme.scale(38), MUTED, false);
 
-                double arrowX = contentX + contentW - theme.scale(63);
-                renderer.text("›", arrowX, cardY + theme.scale(14), MUTED, false);
+                double arrowX = contentX + contentW - theme.scale(78);
+                renderer.text("›", arrowX, cardY + theme.scale(23), MUTED, false);
 
-                double toggleX = contentX + contentW - theme.scale(43);
-                double toggleY = cardY + theme.scale(15);
-                renderer.quad(toggleX, toggleY, theme.scale(25), theme.scale(13), module.isActive() ? PURPLE : OFF);
-                double knobX = module.isActive() ? toggleX + theme.scale(14) : toggleX + theme.scale(2);
-                renderer.quad(knobX, toggleY + theme.scale(2), theme.scale(9), theme.scale(9), TEXT);
+                double toggleX = contentX + contentW - theme.scale(49);
+                double toggleY = cardY + theme.scale(25);
+                renderer.quad(toggleX, toggleY, theme.scale(29), theme.scale(15), module.isActive() ? PURPLE : OFF);
+                double knobX = module.isActive() ? toggleX + theme.scale(16) : toggleX + theme.scale(2);
+                renderer.quad(knobX, toggleY + theme.scale(3), theme.scale(9), theme.scale(9), TEXT);
             }
             cardY += rowH;
         }
 
+        renderer.scissorEnd();
         if (modules.isEmpty()) renderer.text("No modules in this category.", contentX, listY, MUTED, false);
         else if (cardY <= listY) renderer.text("No modules match your search.", contentX, listY, MUTED, false);
     }
@@ -155,13 +157,13 @@ final class FizzyClickGui extends WWidget {
         if (click.button() != GLFW_MOUSE_BUTTON_LEFT) return false;
         double mx = click.x(), my = click.y();
         double px = panelX(), py = panelY(), pw = panelWidth(), ph = panelHeight();
-        double side = theme.scale(154);
+        double side = theme.scale(178);
 
         if (mx < px || mx > px + pw || my < py || my > py + ph) return false;
 
-        double categoryY = py + theme.scale(78);
+        double categoryY = py + theme.scale(88);
         for (Category category : categories) {
-            double bx = px + theme.scale(9), bw = side - theme.scale(18), bh = theme.scale(27);
+            double bx = px + theme.scale(9), bw = side - theme.scale(18), bh = theme.scale(32);
             if (mx >= bx && mx <= bx + bw && my >= categoryY && my <= categoryY + bh) {
                 selected = category;
                 scroll = 0;
@@ -172,22 +174,22 @@ final class FizzyClickGui extends WWidget {
             categoryY += theme.scale(34);
         }
 
-        double searchW = theme.scale(185);
+        double searchW = theme.scale(220);
         double searchX = px + pw - searchW - theme.scale(18);
-        double searchY = py + theme.scale(16);
+        double searchY = py + theme.scale(21);
         searchFocused = mx >= searchX && mx <= searchX + searchW && my >= searchY && my <= searchY + theme.scale(30);
 
-        double contentX = px + side + theme.scale(15);
-        double contentW = pw - side - theme.scale(30);
-        double cardY = py + theme.scale(104) - scroll;
-        double rowH = theme.scale(48);
+        double contentX = px + side + theme.scale(22);
+        double contentW = pw - side - theme.scale(44);
+        double cardY = py + theme.scale(116) - scroll;
+        double rowH = theme.scale(68);
         if (selected != null) {
             for (Module module : Modules.get().getGroup(selected)) {
                 if (!search.isEmpty() && !(module.title.toLowerCase(Locale.ROOT).contains(search.toLowerCase(Locale.ROOT))
                     || module.description.toLowerCase(Locale.ROOT).contains(search.toLowerCase(Locale.ROOT)))) continue;
-                if (mx >= contentX && mx <= contentX + contentW && my >= cardY && my <= cardY + rowH - theme.scale(5)) {
+                if (mx >= contentX && mx <= contentX + contentW && my >= cardY && my <= cardY + rowH - theme.scale(7)) {
                     double localX = mx - contentX;
-                    if (localX >= contentW - theme.scale(58) && localX < contentW - theme.scale(32)) {
+                    if (localX >= contentW - theme.scale(72) && localX < contentW - theme.scale(39)) {
                         mc.setScreen(theme.moduleScreen(module));
                     } else if (localX >= contentW - theme.scale(32)) {
                         module.toggle();
@@ -204,7 +206,7 @@ final class FizzyClickGui extends WWidget {
 
     @Override
     public boolean onMouseScrolled(double amount) {
-        scroll = Math.max(0, scroll - amount * theme.scale(24));
+        scroll = Math.max(0, scroll - amount * theme.scale(38));
         return true;
     }
 
