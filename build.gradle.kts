@@ -82,7 +82,7 @@ dependencies {
     modCompileOnly(libs.viafabricplus) { isTransitive = false }
     modCompileOnly(libs.viafabricplus.api) { isTransitive = false }
 
-    modCompileOnly(libs.baritone)
+    modInclude(libs.baritone)
     modCompileOnly(libs.modmenu)
 
     // Libraries (JAR-in-JAR)
