@@ -80,7 +80,7 @@ public class GuiManager implements KeyDownListener, TickListener, Render2DListen
 	public KeybindSetting clickGuiButton = KeybindSetting.builder().id("key.clickgui").displayName("ClickGUI Key")
 			.defaultValue(InputUtil.fromKeyCode(GLFW.GLFW_KEY_RIGHT_SHIFT, 0)).build();
 
-	private final KeyBinding esc = new KeyBinding("key.esc", GLFW.GLFW_KEY_ESCAPE, "key.categories.aoba");
+	private final KeyBinding esc = new KeyBinding("key.esc", GLFW.GLFW_KEY_ESCAPE, "key.categories.fizzy");
 
 	private boolean clickGuiOpen = false;
 	private final HashMap<Object, Window> pinnedHuds = new HashMap<Object, Window>();
@@ -100,7 +100,7 @@ public class GuiManager implements KeyDownListener, TickListener, Render2DListen
 
 	public static ColorSetting foregroundColor = ColorSetting.builder().id("hud_foreground_color")
 			.displayName("GUI Foreground Color").description("Color of the foreground.")
-			.defaultValue(new Color(238, 21, 247)).build();
+			.defaultValue(new Color(166, 92, 255)).build();
 
 	public static ColorSetting borderColor = ColorSetting.builder().id("hud_border_color")
 			.displayName("GUI Border Color").description("Color of the borders.").defaultValue(new Color(0, 0, 0))
@@ -326,7 +326,7 @@ public class GuiManager implements KeyDownListener, TickListener, Render2DListen
 
 		// Render ClickGUI and Topbar
 		if (clickGuiOpen) {
-			renderer.drawBox(0, 0, drawContext.getScaledWindowWidth(), drawContext.getScaledWindowWidth(),
+			renderer.drawBox(0, 0, drawContext.getScaledWindowWidth(), drawContext.getScaledWindowHeight(),
 					Colors.White);
 			clickGuiNavBar.draw(renderer, drawContext, tickDelta);
 		}
