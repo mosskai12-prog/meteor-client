@@ -43,7 +43,6 @@ import net.aoba.module.modules.misc.AutoFish;
 import net.aoba.module.modules.misc.AutoOminousBottle;
 import net.aoba.module.modules.misc.AutoShear;
 import net.aoba.module.modules.misc.AutoWalk;
-import net.aoba.module.modules.misc.DiscordRPCModule;
 import net.aoba.module.modules.misc.EXPThrower;
 import net.aoba.module.modules.misc.FakePlayer;
 import net.aoba.module.modules.misc.FastBreak;
@@ -127,7 +126,6 @@ public class ModuleManager implements KeyDownListener {
 	public Criticals criticals = new Criticals();
 	public CrystalAura crystalaura = new CrystalAura();
 	public ClickTP clickTP = new ClickTP();
-	public DiscordRPCModule discordRPC = new DiscordRPCModule();
 	public EntityControl entityControl = new EntityControl();
 	public EntityESP entityesp = new EntityESP();
 	public EXPThrower expthrower = new EXPThrower();
