@@ -3,12 +3,17 @@
   "id": "fizzy",
   "version": "${version}",
   "name": "Fizzy Client",
-  "description": "An independent Minecraft client built by the Fizzy team.",
-  "authors": ["Fizzy"],
-  "license": "MIT",
+  "description": "Fizzy Client, a Minecraft 1.21.11 Fabric client port based on Aoba Client.",
+  "authors": [
+    "Fizzy contributors",
+    "Aoba Client contributors"
+  ],
+  "license": "GPL-3.0-or-later",
   "environment": "client",
   "entrypoints": {
-    "client": ["com.fizzy.client.FizzyClient"]
+    "client": [
+      "com.fizzy.client.FizzyClient"
+    ]
   },
   "depends": {
     "fabricloader": ">=0.18.1",
