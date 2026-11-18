@@ -25,6 +25,7 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.BeetrootsBlock;
 import net.minecraft.block.CropBlock;
+import net.minecraft.block.NetherWartBlock;
 import net.minecraft.item.Item;
 import net.minecraft.item.Items;
 import net.minecraft.util.math.BlockPos;
@@ -192,6 +193,11 @@ public class AutoFarm extends Module {
             return state.get(BeetrootsBlock.AGE) >= BeetrootsBlock.BEETROOTS_MAX_AGE;
         }
 
+        // Nether wart uses its own 0-3 age property, not CropBlock.AGE.
+        if (state.isOf(Blocks.NETHER_WART)) {
+            return state.get(NetherWartBlock.AGE) >= 3;
+        }
+
         if (!(state.getBlock() instanceof CropBlock)) return false;
         return state.get(CropBlock.AGE) >= CropBlock.MAX_AGE;
     }
@@ -247,7 +253,11 @@ public class AutoFarm extends Module {
     private void tryReplant() {
         if (!replant.get() || replantTarget == null || replantCrop == null) return;
         if (!mc.world.getBlockState(replantTarget).isAir()) return;
-        if (!mc.world.getBlockState(replantTarget.down()).isOf(Blocks.FARMLAND)) {
+        Block support = mc.world.getBlockState(replantTarget.down()).getBlock();
+        boolean validSupport = replantCrop == Blocks.NETHER_WART
+            ? support == Blocks.SOUL_SAND
+            : support == Blocks.FARMLAND;
+        if (!validSupport) {
             replantTarget = null;
             replantCrop = null;
             return;
@@ -273,6 +283,7 @@ public class AutoFarm extends Module {
         if (crop == Blocks.CARROTS) return Items.CARROT;
         if (crop == Blocks.POTATOES) return Items.POTATO;
         if (crop == Blocks.BEETROOTS) return Items.BEETROOT_SEEDS;
+        if (crop == Blocks.NETHER_WART) return Items.NETHER_WART;
         return null;
     }
 }
