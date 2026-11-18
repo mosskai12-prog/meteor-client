@@ -2,7 +2,7 @@ name: Build Fizzy Client
 
 on:
   push:
-    branches: [fizzy-rewrite]
+    branches: [fizzy-rewrite, fizzy-ui-rework]
   pull_request:
     branches: [fizzy-rewrite]
   workflow_dispatch:
