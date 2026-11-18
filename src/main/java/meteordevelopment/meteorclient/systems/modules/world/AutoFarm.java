@@ -23,6 +23,7 @@ import meteordevelopment.orbit.EventHandler;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.BeetrootsBlock;
 import net.minecraft.block.CropBlock;
 import net.minecraft.item.Item;
 import net.minecraft.item.Items;
@@ -151,10 +152,14 @@ public class AutoFarm extends Module {
     }
 
     private boolean isMatureCrop(BlockState state) {
-        if (!(state.getBlock() instanceof CropBlock)) return false;
+        // Beetroots are CropBlocks too, but they use their own 0-3 AGE property.
+        // CropBlock.AGE is the 0-7 property and is not present on beetroot states.
+        if (state.isOf(Blocks.BEETROOTS)) {
+            return state.get(BeetrootsBlock.AGE) >= BeetrootsBlock.BEETROOTS_MAX_AGE;
+        }
 
-        int maxAge = state.isOf(Blocks.BEETROOTS) ? 3 : 7;
-        return state.get(CropBlock.AGE) >= maxAge;
+        if (!(state.getBlock() instanceof CropBlock)) return false;
+        return state.get(CropBlock.AGE) >= CropBlock.MAX_AGE;
     }
 
     private void walkTo(BlockPos crop) {
