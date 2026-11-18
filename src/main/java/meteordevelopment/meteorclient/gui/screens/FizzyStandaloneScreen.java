@@ -83,6 +83,17 @@ public final class FizzyStandaloneScreen extends Screen {
         return FabricLoader.getInstance().getConfigDir().resolve("fizzy-clickgui.properties").toFile();
     }
 
+    private void fillRounded(DrawContext ctx, int x1, int y1, int x2, int y2, int radius, int color) {
+        int r = Math.max(1, Math.min(radius, Math.min((x2 - x1) / 2, (y2 - y1) / 2)));
+        for (int row = 0; row < r; row++) {
+            int dy = r - row - 1;
+            int inset = r - (int) Math.sqrt(r * r - dy * dy);
+            ctx.fill(x1 + inset, y1 + row, x2 - inset, y1 + row + 1, color);
+            ctx.fill(x1 + inset, y2 - row - 1, x2 - inset, y2 - row, color);
+        }
+        ctx.fill(x1, y1 + r, x2, y2 - r, color);
+    }
+
     private int panelX() { return (width - PANEL_W) / 2; }
     private int panelY() { return Math.max(96, (height - PANEL_H) / 2 + 18); }
     private int tabsWidth() { return categories.size() * 82; }
@@ -125,8 +136,8 @@ public final class FizzyStandaloneScreen extends Screen {
         drawTextWithShadow(ctx, "CLIENT  /  CLICK GUI", 53, 12, MUTED);
 
         int searchW = 240, searchX = (width - searchW) / 2;
-        ctx.fill(searchX, 36, searchX + searchW, 60, 0xFF0D2B49);
-        ctx.fill(searchX, 36, searchX + searchW, 39, searchFocused ? accent() : 0xFF36BFFF);
+        fillRounded(ctx, searchX, 36, searchX + searchW, 60, 7, 0xFF0D2B49);
+        fillRounded(ctx, searchX, 36, searchX + searchW, 40, 7, searchFocused ? accent() : 0xFF36BFFF);
         String searchText = searchQuery.isEmpty() ? "Search modules..." : searchQuery;
         drawTextWithShadow(ctx, searchText, searchX + 10, 44, searchQuery.isEmpty() ? MUTED : TEXT);
         if (searchFocused && (System.currentTimeMillis() / 500) % 2 == 0) {
@@ -137,8 +148,8 @@ public final class FizzyStandaloneScreen extends Screen {
         for (int i = 0; i < categories.size(); i++) {
             int x = tabsX() + i * 82, y = tabY();
             boolean active = i == selectedCategory;
-            ctx.fill(x, y, x + 78, y + 22, active ? 0xFF14518A : 0xFF0D2B49);
-            ctx.fill(x, y, x + 78, y + 2, active ? accent() : 0xFF247EB8);
+            fillRounded(ctx, x, y, x + 78, y + 22, 6, active ? 0xFF14518A : 0xFF0D2B49);
+            fillRounded(ctx, x, y, x + 78, y + 3, 3, active ? accent() : 0xFF247EB8);
             drawCentered(ctx, categories.get(i).name.toUpperCase(Locale.ROOT), x, y + 7, 78, active ? accent() : MUTED);
         }
 
@@ -152,13 +163,10 @@ public final class FizzyStandaloneScreen extends Screen {
     private void drawPanel(DrawContext ctx, int index, int mx, int my) {
         Category category = categories.get(index);
         int x = panelX(), y = panelY();
-        ctx.fill(x + 3, y + 4, x + PANEL_W + 3, y + PANEL_H + 4, 0x55000000);
-        ctx.fill(x, y, x + PANEL_W, y + PANEL_H, PANEL);
-        ctx.fill(x, y, x + PANEL_W, y + 1, PANEL_EDGE);
-        ctx.fill(x, y + PANEL_H - 1, x + PANEL_W, y + PANEL_H, PANEL_EDGE);
-        ctx.fill(x, y, x + 1, y + PANEL_H, PANEL_EDGE);
-        ctx.fill(x + PANEL_W - 1, y, x + PANEL_W, y + PANEL_H, PANEL_EDGE);
-        ctx.fill(x + 1, y + 1, x + PANEL_W - 1, y + HEADER_H, 0xFF0A1E35);
+        fillRounded(ctx, x + 3, y + 4, x + PANEL_W + 3, y + PANEL_H + 4, 10, 0x55000000);
+        fillRounded(ctx, x - 1, y - 1, x + PANEL_W + 1, y + PANEL_H + 1, 10, PANEL_EDGE);
+        fillRounded(ctx, x, y, x + PANEL_W, y + PANEL_H, 9, PANEL);
+        fillRounded(ctx, x + 2, y + 2, x + PANEL_W - 2, y + HEADER_H, 7, 0xFF0A1E35);
         drawCentered(ctx, category.name.toUpperCase(Locale.ROOT) + " MODULES", x, y + 12, PANEL_W, accent());
         ctx.fill(x + 9, y + HEADER_H, x + PANEL_W - 9, y + HEADER_H + 1, PANEL_EDGE);
 
@@ -169,7 +177,7 @@ public final class FizzyStandaloneScreen extends Screen {
         for (Module module : visibleModules(category)) {
             boolean open = expanded.getOrDefault(module, false);
             boolean hovering = mx >= x + PAD && mx <= x + PANEL_W - PAD && my >= cy && my <= cy + ROW_H;
-            ctx.fill(x + PAD, cy, x + PANEL_W - PAD, cy + ROW_H - 1, hovering ? ROW_HOVER : ROW);
+            fillRounded(ctx, x + PAD, cy, x + PANEL_W - PAD, cy + ROW_H - 1, 5, hovering ? ROW_HOVER : ROW);
             if (module.isActive()) ctx.fill(x + PAD, cy + 3, x + PAD + 2, cy + ROW_H - 4, accent());
             drawTextWithShadow(ctx, module.title, x + PAD + 9, cy + 6, module.isActive() ? accent() : TEXT);
             ctx.fill(x + PANEL_W - 16, cy + 10, x + PANEL_W - 11, cy + 15,
@@ -206,14 +214,14 @@ public final class FizzyStandaloneScreen extends Screen {
 
     private void drawThemes(DrawContext ctx, int mx, int my) {
         int w = 88, h = 22, x = width - w - 10, y = height - h - 22;
-        ctx.fill(x, y, x + w, y + h, 0xFF281A38);
-        ctx.fill(x, y, x + w, y + 1, PANEL_EDGE);
+        fillRounded(ctx, x, y, x + w, y + h, 7, 0xFF103457);
+        fillRounded(ctx, x, y, x + w, y + 3, 4, PANEL_EDGE);
         drawCentered(ctx, "THEMES  ▾", x, y + 8, w, accent());
         if (!themesOpen) return;
         String[] choices = {"Purple Haze", "Ocean", "Crimson", "Mono"};
         int yy = y - choices.length * 22 - 5;
         for (String choice : choices) {
-            ctx.fill(x, yy, x + w, yy + 20, 0xFF103457);
+            fillRounded(ctx, x, yy, x + w, yy + 20, 5, 0xFF103457);
             drawTextWithShadow(ctx, (theme.equals(choice) ? "● " : "○ ") + choice, x + 8, yy + 6,
                 theme.equals(choice) ? accent() : TEXT);
             yy += 19;
