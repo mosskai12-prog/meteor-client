@@ -123,7 +123,7 @@ final class FizzyClickGui extends WWidget {
                 default -> "⚙";
             };
             String heading = icon + " " + category.name;
-            double titleW = theme.textWidth(heading, false);
+            double titleW = theme.textWidth(heading, heading.length(), false);
             r.text(heading, px + (pw - titleW) / 2, py + s(7), TEXT, false);
             r.quad(px + s(4), py + s(HEADER_H), pw - s(8), s(0.7), BORDER);
 
@@ -142,7 +142,7 @@ final class FizzyClickGui extends WWidget {
                 rounded(r, px + s(PAD), rowY, pw - s(PAD * 2), s(ROW_H), s(3), rowColor);
                 if (ea > 0.01) rounded(r, px + s(PAD), rowY, pw - s(PAD * 2), s(ROW_H), s(3), new Color(ACCENT.r, ACCENT.g, ACCENT.b, (int)(22 * ea)));
                 Color label = mix(MUTED, ACCENT, ea);
-                double tw = theme.textWidth(module.title, false);
+                double tw = theme.textWidth(module.title, module.title.length(), false);
                 r.text(module.title, px + (pw - tw) / 2, rowY + s(5), label, false);
                 // Settings state dot: green when open, red when closed.
                 boolean isOpen = expanded.getOrDefault(module, false);
@@ -193,7 +193,7 @@ final class FizzyClickGui extends WWidget {
 
     private void drawSlider(GuiRenderer r, String name, String value, double x, double y, double w, double min, double max, double current) {
         r.text(name, x, y, MUTED, false);
-        double vw = theme.textWidth(value, false);
+        double vw = theme.textWidth(value, value.length(), false);
         r.text(value, x + w - vw, y, TEXT, false);
         double trackY = y + s(11), trackW = w;
         rounded(r, x, trackY, trackW, s(2.5), s(1.2), new Color(42, 36, 51, 255));
@@ -278,15 +278,16 @@ final class FizzyClickGui extends WWidget {
     }
 
     @Override
-    public boolean onMouseDragged(Click click, double deltaX, double deltaY) {
+    public void onMouseMoved(double mouseX, double mouseY, double lastMouseX, double lastMouseY) {
         if (draggingSetting != null) {
             for (int ci = 0; ci < categories.size(); ci++) {
                 double px = panelX(ci), pw = s(PANEL_W);
-                updateSlider(draggingSetting, click.x(), px + s(PAD + 4), pw - s(PAD * 2 + 8));
+                if (mouseX >= px && mouseX <= px + pw) {
+                    updateSlider(draggingSetting, mouseX, px + s(PAD + 4), pw - s(PAD * 2 + 8));
+                    break;
+                }
             }
-            return true;
         }
-        return false;
     }
 
     @Override
