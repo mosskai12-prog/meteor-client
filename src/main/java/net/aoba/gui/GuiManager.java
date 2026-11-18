@@ -52,7 +52,6 @@ import net.aoba.gui.navigation.huds.SpeedHud;
 import net.aoba.gui.navigation.huds.TimeHud;
 import net.aoba.gui.navigation.huds.WatermarkHud;
 import net.aoba.gui.navigation.windows.AntiCheatWindow;
-import net.aoba.gui.navigation.windows.AuthCrackerWindow;
 import net.aoba.gui.navigation.windows.GoToWindow;
 import net.aoba.gui.navigation.windows.HudOptionsWindow;
 import net.aoba.gui.navigation.windows.MacroWindow;
@@ -153,7 +152,6 @@ public class GuiManager implements KeyDownListener, TickListener, Render2DListen
 
 	public void Initialize() {
 		System.out.println("Initializing");
-		toolsPane.addWindow(new AuthCrackerWindow());
 		toolsPane.addWindow(new GoToWindow());
 		toolsPane.addWindow(new MacroWindow());
 
