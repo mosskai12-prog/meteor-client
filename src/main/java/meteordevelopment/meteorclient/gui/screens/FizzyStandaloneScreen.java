@@ -24,10 +24,10 @@ public final class FizzyStandaloneScreen extends Screen {
     private static final int PANEL_W = 260, PANEL_H = 360, HEADER_H = 29;
     private static final int GAP = 7, ROW_H = 21, PAD = 7;
     // Fully opaque surfaces keep the Minecraft world from showing through the GUI.
-    private static final int BG = 0xFF10091B, PANEL = 0xFF21142F, PANEL_EDGE = 0xFF9B55E8;
-    private static final int ROW = 0xFF302044, ROW_HOVER = 0xFF493064;
-    private static final int PURPLE = 0xFFFF79E8, TEXT = 0xFFFFF5FF, MUTED = 0xFFC0A9D5;
-    private static final int GREEN = 0xFF70F5B0;
+    private static final int BG = 0xFF061426, PANEL = 0xFF0B2440, PANEL_EDGE = 0xFF36BFFF;
+    private static final int ROW = 0xFF103457, ROW_HOVER = 0xFF185080;
+    private static final int PURPLE = 0xFF65D8FF, TEXT = 0xFFF0FAFF, MUTED = 0xFF9BCBE8;
+    private static final int GREEN = 0xFF70F5C5;
     private final List<Category> categories = new ArrayList<>();
     private final Map<Module, Boolean> expanded = new HashMap<>();
     private final Map<Category, Integer> scroll = new HashMap<>();
@@ -125,8 +125,8 @@ public final class FizzyStandaloneScreen extends Screen {
         drawTextWithShadow(ctx, "CLIENT  /  CLICK GUI", 53, 12, MUTED);
 
         int searchW = 240, searchX = (width - searchW) / 2;
-        ctx.fill(searchX, 36, searchX + searchW, 60, 0xFF281A38);
-        ctx.fill(searchX, 36, searchX + searchW, 39, searchFocused ? accent() : 0xFF9B55E8);
+        ctx.fill(searchX, 36, searchX + searchW, 60, 0xFF0D2B49);
+        ctx.fill(searchX, 36, searchX + searchW, 39, searchFocused ? accent() : 0xFF36BFFF);
         String searchText = searchQuery.isEmpty() ? "Search modules..." : searchQuery;
         drawTextWithShadow(ctx, searchText, searchX + 10, 44, searchQuery.isEmpty() ? MUTED : TEXT);
         if (searchFocused && (System.currentTimeMillis() / 500) % 2 == 0) {
@@ -137,8 +137,8 @@ public final class FizzyStandaloneScreen extends Screen {
         for (int i = 0; i < categories.size(); i++) {
             int x = tabsX() + i * 82, y = tabY();
             boolean active = i == selectedCategory;
-            ctx.fill(x, y, x + 78, y + 22, active ? 0xFF56306F : 0xFF281A38);
-            ctx.fill(x, y, x + 78, y + 2, active ? accent() : 0xFF65427D);
+            ctx.fill(x, y, x + 78, y + 22, active ? 0xFF14518A : 0xFF0D2B49);
+            ctx.fill(x, y, x + 78, y + 2, active ? accent() : 0xFF247EB8);
             drawCentered(ctx, categories.get(i).name.toUpperCase(Locale.ROOT), x, y + 7, 78, active ? accent() : MUTED);
         }
 
@@ -158,7 +158,7 @@ public final class FizzyStandaloneScreen extends Screen {
         ctx.fill(x, y + PANEL_H - 1, x + PANEL_W, y + PANEL_H, PANEL_EDGE);
         ctx.fill(x, y, x + 1, y + PANEL_H, PANEL_EDGE);
         ctx.fill(x + PANEL_W - 1, y, x + PANEL_W, y + PANEL_H, PANEL_EDGE);
-        ctx.fill(x + 1, y + 1, x + PANEL_W - 1, y + HEADER_H, 0xFF1D1727);
+        ctx.fill(x + 1, y + 1, x + PANEL_W - 1, y + HEADER_H, 0xFF0A1E35);
         drawCentered(ctx, category.name.toUpperCase(Locale.ROOT) + " MODULES", x, y + 12, PANEL_W, accent());
         ctx.fill(x + 9, y + HEADER_H, x + PANEL_W - 9, y + HEADER_H + 1, PANEL_EDGE);
 
@@ -173,7 +173,7 @@ public final class FizzyStandaloneScreen extends Screen {
             if (module.isActive()) ctx.fill(x + PAD, cy + 3, x + PAD + 2, cy + ROW_H - 4, accent());
             drawTextWithShadow(ctx, module.title, x + PAD + 9, cy + 6, module.isActive() ? accent() : TEXT);
             ctx.fill(x + PANEL_W - 16, cy + 10, x + PANEL_W - 11, cy + 15,
-                open ? GREEN : (module.isActive() ? GREEN : 0xFF665D70));
+                open ? GREEN : (module.isActive() ? GREEN : 0xFF477A9D));
             cy += ROW_H;
             if (open) {
                 for (SettingGroup group : module.settings) {
@@ -213,7 +213,7 @@ public final class FizzyStandaloneScreen extends Screen {
         String[] choices = {"Purple Haze", "Ocean", "Crimson", "Mono"};
         int yy = y - choices.length * 22 - 5;
         for (String choice : choices) {
-            ctx.fill(x, yy, x + w, yy + 20, 0xFF302044);
+            ctx.fill(x, yy, x + w, yy + 20, 0xFF103457);
             drawTextWithShadow(ctx, (theme.equals(choice) ? "● " : "○ ") + choice, x + 8, yy + 6,
                 theme.equals(choice) ? accent() : TEXT);
             yy += 19;
