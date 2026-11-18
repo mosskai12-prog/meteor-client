@@ -45,7 +45,7 @@ public class AutoFarm extends Module {
     private final Setting<Integer> actionDelay = sgGeneral.add(new IntSetting.Builder()
         .name("action-delay")
         .description("Ticks to wait between farming actions.")
-        .defaultValue(4)
+        .defaultValue(1)
         .min(1)
         .sliderMax(20)
         .build()
@@ -108,7 +108,7 @@ public class AutoFarm extends Module {
         // Spread crop scanning across ticks instead of checking tens of thousands
         // of blocks in one frame. This prevents large, repeated client-thread spikes.
         if (scanIterator == null && scanCooldown-- <= 0) beginScan();
-        if (scanIterator != null) scanBlocks(2048);
+        if (scanIterator != null) scanBlocks(4096);
 
         if (scanIterator != null) return;
         if (++ticks < actionDelay.get()) return;
@@ -154,7 +154,7 @@ public class AutoFarm extends Module {
         ).iterator();
         scanBest = null;
         scanBestDistance = Double.MAX_VALUE;
-        scanCooldown = 5;
+        scanCooldown = 0;
     }
 
     private void scanBlocks(int budget) {
