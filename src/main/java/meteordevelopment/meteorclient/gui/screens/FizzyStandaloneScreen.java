@@ -167,6 +167,10 @@ public final class FizzyStandaloneScreen extends Screen {
         return value;
     }
 
+    private void drawTextWithShadow(DrawContext ctx, String value, int x, int y, int color) {
+        ctx.drawTextWithShadow(textRenderer, Text.literal(value), x, y, color);
+    }
+
     private void drawCentered(DrawContext ctx, String value, int x, int y, int w, int color) {
         ctx.drawTextWithShadow(textRenderer, value, x + (w - textRenderer.getWidth(value)) / 2, y, color);
     }
