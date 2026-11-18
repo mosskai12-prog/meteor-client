@@ -29,6 +29,8 @@ import net.minecraft.item.Item;
 import net.minecraft.item.Items;
 import net.minecraft.util.math.BlockPos;
 
+import java.util.Iterator;
+
 public class AutoFarm extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
 
@@ -69,6 +71,11 @@ public class AutoFarm extends Module {
     private BlockPos replantTarget;
     private Block replantCrop;
     private boolean warnedNoPathing;
+    private Iterator<BlockPos> scanIterator;
+    private BlockPos scanBest;
+    private BlockPos cachedCrop;
+    private double scanBestDistance;
+    private int scanCooldown;
 
     public AutoFarm() {
         super(Categories.World, "auto-farm", "Finds mature crops, walks to them, selects a suitable tool, harvests and replants.");
@@ -81,6 +88,10 @@ public class AutoFarm extends Module {
         replantTarget = null;
         replantCrop = null;
         warnedNoPathing = false;
+        scanIterator = null;
+        scanBest = null;
+        cachedCrop = null;
+        scanCooldown = 0;
     }
 
     @Override
@@ -89,6 +100,8 @@ public class AutoFarm extends Module {
         pathTarget = null;
         replantTarget = null;
         replantCrop = null;
+        scanIterator = null;
+        cachedCrop = null;
     }
 
     @EventHandler
@@ -98,11 +111,18 @@ public class AutoFarm extends Module {
         // Finish a replant after the server has acknowledged the harvested block.
         tryReplant();
 
+        // Spread crop scanning across ticks instead of checking tens of thousands
+        // of blocks in one frame. This prevents large, repeated client-thread spikes.
+        if (scanIterator == null && scanCooldown-- <= 0) beginScan();
+        if (scanIterator != null) scanBlocks(512);
+
+        if (scanIterator != null) return;
         if (++ticks < actionDelay.get()) return;
         ticks = 0;
 
-        BlockPos crop = findNearestMatureCrop();
-        if (crop == null) {
+        BlockPos crop = cachedCrop;
+        if (crop == null || !isMatureCrop(mc.world.getBlockState(crop))) {
+            cachedCrop = null;
             stopPathing();
             return;
         }
@@ -121,6 +141,7 @@ public class AutoFarm extends Module {
         Rotations.rotate(Rotations.getYaw(target), Rotations.getPitch(target), () -> {
             if (mc.world == null || !isMatureCrop(mc.world.getBlockState(target))) return;
             BlockUtils.breakBlock(target, swingHand.get());
+            cachedCrop = null;
             if (replant.get()) {
                 replantTarget = target;
                 replantCrop = block;
@@ -128,27 +149,40 @@ public class AutoFarm extends Module {
         });
     }
 
-    private BlockPos findNearestMatureCrop() {
+    private void beginScan() {
         BlockPos origin = mc.player.getBlockPos();
         int radius = (int) Math.ceil(scanRange.get());
-        BlockPos best = null;
-        double bestDistance = Double.MAX_VALUE;
+        // Crops are normally on farmland near the player's level. Limit vertical
+        // scanning to four blocks above and below instead of scanning a full cube.
+        scanIterator = BlockPos.iterate(
+            origin.add(-radius, -4, -radius),
+            origin.add(radius, 4, radius)
+        ).iterator();
+        scanBest = null;
+        scanBestDistance = Double.MAX_VALUE;
+        scanCooldown = 20;
+    }
 
-        for (BlockPos pos : BlockPos.iterate(
-            origin.add(-radius, -radius, -radius),
-            origin.add(radius, radius, radius)
-        )) {
+    private void scanBlocks(int budget) {
+        BlockPos origin = mc.player.getBlockPos();
+        int checked = 0;
+        while (scanIterator.hasNext() && checked++ < budget) {
+            BlockPos pos = scanIterator.next();
             BlockState state = mc.world.getBlockState(pos);
             if (!isMatureCrop(state)) continue;
 
             double distance = origin.getSquaredDistance(pos);
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                best = pos.toImmutable();
+            if (distance < scanBestDistance) {
+                scanBestDistance = distance;
+                scanBest = pos.toImmutable();
             }
         }
 
-        return best;
+        if (!scanIterator.hasNext()) {
+            cachedCrop = scanBest;
+            scanIterator = null;
+            ticks = actionDelay.get();
+        }
     }
 
     private boolean isMatureCrop(BlockState state) {
