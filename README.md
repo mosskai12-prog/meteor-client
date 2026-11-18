@@ -1,22 +1,16 @@
 # Fizzy Client
 
-An independent Fabric client project for Minecraft 1.21.11.
+Independent Fabric client for Minecraft Java 1.21.11. This project does not use Meteor Client source or APIs.
 
-## Current state
+## Working features
+- Right Shift opens the Fizzy Click GUI.
+- Toggle Sprint: automatically sprints while the forward key is held and sneak is not held.
+- FPS Display: shows live FPS in the HUD.
+- Coordinates: shows the player's current block X/Y/Z.
+- Keystrokes: shows live W/A/S/D and jump input.
+- Module states save to `config/fizzy-client.properties`.
 
-- Original Fizzy Click GUI screen (not Meteor's GUI).
-- Five category columns with a dark translucent theme and purple accents.
-- Right Shift opens the GUI.
-- Left-click a module card to toggle its saved UI state.
-- Right-click a module card to open its settings panel.
-- Module toggle states are stored in `config/fizzy-client.properties`.
-
-The current commit is the UI foundation. The listed module cards are placeholders; their actual gameplay and HUD features will be implemented independently in later steps. A saved toggle does not imply that a module's feature is implemented yet.
+Left-click a module to toggle it. Right-click for a short description. The other categories are reserved for future original modules.
 
 ## Build
-
-Requires JDK 21.
-
-```sh
-./gradlew build
-```
+Requires JDK 21. Run `./gradlew build`.

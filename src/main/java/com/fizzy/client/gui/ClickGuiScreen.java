@@ -1,49 +1,37 @@
 package com.fizzy.client.gui;
 
+import com.fizzy.client.FizzyClient;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 public final class ClickGuiScreen extends Screen {
     private static final int PURPLE = 0xFF9B72F2;
     private static final int PURPLE_DARK = 0xFF7046C8;
     private static final int PANEL = 0xF0181721;
-    private static final int PANEL_LIGHT = 0xFF211F2D;
     private static final int CARD = 0xFF292635;
     private static final int CARD_HOVER = 0xFF343044;
     private static final int MUTED = 0xFF9B96AA;
     private static final int WHITE = 0xFFF4F1FA;
 
     private static final List<Category> CATEGORIES = List.of(
-        new Category("COMBAT", "C", List.of("Target HUD", "Totem Counter", "Hit Sounds", "Combat Log")),
-        new Category("MOVEMENT", "M", List.of("Toggle Sprint", "Zoom", "Motion HUD", "Step Assist")),
-        new Category("RENDER", "R", List.of("FPS Display", "Coordinates", "Keystrokes", "Armor HUD")),
-        new Category("WORLD", "W", List.of("Waypoints", "Block Outline", "World Info", "Time Display")),
-        new Category("MISC", "⋯", List.of("Chat Timestamps", "Auto Reconnect", "Sound Alerts", "Client Settings"))
+        new Category("COMBAT", "C", List.of()),
+        new Category("MOVEMENT", "M", List.of("Toggle Sprint")),
+        new Category("RENDER", "R", List.of("FPS Display", "Coordinates", "Keystrokes")),
+        new Category("WORLD", "W", List.of()),
+        new Category("MISC", "⋯", List.of())
     );
 
-    private final Map<String, Boolean> enabled = new LinkedHashMap<>();
     private final Map<String, Rect> moduleRects = new LinkedHashMap<>();
     private String selectedModule;
     private float openProgress;
-    private float hoverPulse;
-    private double scrollOffset;
 
     public ClickGuiScreen() {
         super(Component.literal("Fizzy Client"));
-        for (Category category : CATEGORIES) {
-            for (String module : category.modules()) enabled.put(module, false);
-        }
-        loadSettings();
     }
 
     @Override
@@ -53,8 +41,7 @@ public final class ClickGuiScreen extends Screen {
 
     @Override
     public void tick() {
-        openProgress = Math.min(1.0f, openProgress + 0.14f);
-        hoverPulse += 0.08f;
+        openProgress = Math.min(1.0f, openProgress + 0.16f);
     }
 
     @Override
@@ -76,14 +63,13 @@ public final class ClickGuiScreen extends Screen {
         roundRect(g, left + 1, top + 1, drawWidth - 2, 54, 11, 0xFF211E2B);
         g.fill(left + 1, top + 48, left + drawWidth - 1, top + 55, 0xFF211E2B);
 
-        // Header
         roundRect(g, left + 18, top + 13, 28, 28, 8, PURPLE_DARK);
         centered(g, "F", left + 18, top + 13, 28, 28, WHITE);
         g.drawString(font, "FIZZY", left + 56, top + 13, WHITE, false);
         g.drawString(font, "CLIENT", left + 56, top + 27, PURPLE, false);
         g.drawString(font, "INDEPENDENT CLIENT  •  1.21.11", left + 142, top + 21, MUTED, false);
 
-        String status = "GUI PREVIEW";
+        String status = "4 WORKING MODULES";
         int statusWidth = font.width(status) + 18;
         roundRect(g, left + drawWidth - statusWidth - 20, top + 17, statusWidth, 22, 7, 0xFF302A3D);
         g.drawString(font, status, left + drawWidth - statusWidth - 11, top + 24, PURPLE, false);
@@ -111,7 +97,7 @@ public final class ClickGuiScreen extends Screen {
                 Rect rect = new Rect(x, moduleY, colWidth, cardHeight);
                 moduleRects.put(module, rect);
                 boolean hovered = contains(rect, mouseX, mouseY);
-                boolean active = enabled.getOrDefault(module, false);
+                boolean active = FizzyClient.MODULES.isEnabled(module);
 
                 roundRect(g, x, moduleY, colWidth, cardHeight, 7,
                     hovered ? CARD_HOVER : CARD);
@@ -126,13 +112,16 @@ public final class ClickGuiScreen extends Screen {
                     active ? 0xFFFFFFFF : 0xFFB8B3C1);
 
                 if (hovered) {
-                    g.drawString(font, "Right-click: settings", x + 8, moduleY + 25, MUTED, false);
+                    g.drawString(font, "Right-click: info", x + 8, moduleY + 25, MUTED, false);
                 }
                 moduleY += cardHeight + 7;
             }
+
+            if (category.modules().isEmpty()) {
+                g.drawString(font, "Coming soon", x + 8, moduleY + 8, 0xFF777184, false);
+            }
         }
 
-        // Footer
         g.fill(left + 18, contentBottom - 22, left + drawWidth - 18, contentBottom - 21, 0xFF393443);
         g.drawString(font, "RIGHT SHIFT  •  CLOSE", left + 20, contentBottom - 13, MUTED, false);
         String footer = "FIZZY  /  BUILT FROM SCRATCH";
@@ -143,18 +132,40 @@ public final class ClickGuiScreen extends Screen {
     }
 
     private void renderSettings(GuiGraphics g, int left, int top, int panelWidth, int panelHeight) {
-        int w = 270;
-        int h = 150;
+        int w = 290;
+        int h = 154;
         int x = left + (panelWidth - w) / 2;
         int y = top + (panelHeight - h) / 2;
         roundRect(g, x - 5, y - 5, w + 10, h + 10, 12, 0xCC08070D);
         roundRect(g, x, y, w, h, 10, 0xFF24212F);
-        g.drawString(font, "MODULE SETTINGS", x + 16, y + 15, PURPLE, false);
-        g.drawString(font, selectedModule, x + 16, y + 38, WHITE, false);
-        g.drawString(font, "This module's controls will be", x + 16, y + 66, MUTED, false);
-        g.drawString(font, "added as its feature is rebuilt.", x + 16, y + 79, MUTED, false);
-        roundRect(g, x + 16, y + 108, w - 32, 26, 7, 0xFF393047);
-        centered(g, "LEFT-CLICK OUTSIDE TO CLOSE", x + 16, y + 108, w - 32, 26, WHITE);
+        g.drawString(font, "MODULE DETAILS", x + 16, y + 15, PURPLE, false);
+        g.drawString(font, selectedModule, x + 16, y + 39, WHITE, false);
+        String description = switch (selectedModule) {
+            case "Toggle Sprint" -> "Automatically sprints while moving forward.";
+            case "FPS Display" -> "Shows your current frames per second.";
+            case "Coordinates" -> "Shows your current block coordinates.";
+            case "Keystrokes" -> "Displays live WASD and jump key presses.";
+            default -> "This module is not implemented yet.";
+        };
+        drawWrapped(g, description, x + 16, y + 66, w - 32, MUTED);
+        roundRect(g, x + 16, y + 116, w - 32, 25, 7, 0xFF393047);
+        centered(g, "CLICK ANYWHERE TO CLOSE", x + 16, y + 116, w - 32, 25, WHITE);
+    }
+
+    private void drawWrapped(GuiGraphics g, String text, int x, int y, int maxWidth, int color) {
+        StringBuilder line = new StringBuilder();
+        int lineY = y;
+        for (String word : text.split(" ")) {
+            String candidate = line.isEmpty() ? word : line + " " + word;
+            if (font.width(candidate) > maxWidth && !line.isEmpty()) {
+                g.drawString(font, line.toString(), x, lineY, color, false);
+                lineY += 12;
+                line.setLength(0);
+            }
+            if (!line.isEmpty()) line.append(' ');
+            line.append(word);
+        }
+        if (!line.isEmpty()) g.drawString(font, line.toString(), x, lineY, color, false);
     }
 
     @Override
@@ -166,14 +177,12 @@ public final class ClickGuiScreen extends Screen {
 
         for (Map.Entry<String, Rect> entry : moduleRects.entrySet()) {
             if (!contains(entry.getValue(), mouseX, mouseY)) continue;
-
             if (button == 1) {
                 selectedModule = entry.getKey();
                 return true;
             }
             if (button == 0) {
-                enabled.put(entry.getKey(), !enabled.getOrDefault(entry.getKey(), false));
-                saveSettings();
+                FizzyClient.MODULES.toggle(entry.getKey());
                 return true;
             }
         }
@@ -187,44 +196,6 @@ public final class ClickGuiScreen extends Screen {
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
-    }
-
-    @Override
-    public void onClose() {
-        saveSettings();
-        super.onClose();
-    }
-
-    private void loadSettings() {
-        Path file = settingsPath();
-        if (!Files.exists(file)) return;
-        Properties properties = new Properties();
-        try (var reader = Files.newBufferedReader(file)) {
-            properties.load(reader);
-            for (String module : enabled.keySet()) {
-                enabled.put(module, Boolean.parseBoolean(properties.getProperty(module, "false")));
-            }
-        } catch (IOException exception) {
-            // Keep defaults if the settings file cannot be read.
-        }
-    }
-
-    private void saveSettings() {
-        Path file = settingsPath();
-        Properties properties = new Properties();
-        enabled.forEach((name, value) -> properties.setProperty(name, Boolean.toString(value)));
-        try {
-            Files.createDirectories(file.getParent());
-            try (var writer = Files.newBufferedWriter(file)) {
-                properties.store(writer, "Fizzy Client module settings");
-            }
-        } catch (IOException exception) {
-            // The GUI remains usable even if settings cannot be saved.
-        }
-    }
-
-    private static Path settingsPath() {
-        return Path.of("config", "fizzy-client.properties");
     }
 
     private static boolean contains(Rect rect, double x, double y) {
