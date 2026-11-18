@@ -25,6 +25,7 @@ Items that need to be disabled, removed, or redesigned before they are enabled i
 - **Discord Rich Presence** sends game/status information to Discord when enabled. It must remain opt-in and clearly disclosed.
 - **Addon loading** can execute third-party mod code. No untrusted add-ons will be bundled or auto-downloaded.
 - The Discord command launches the user's default browser through an OS process. This is not needed for the client core and will be reviewed rather than copied blindly.
+- The archive includes platform-specific Discord RPC native libraries. They will not be bundled unless the opt-in RPC feature is retained and those binaries/dependencies are separately reviewed.
 
 Microsoft authentication code communicates with Microsoft/Xbox/Minecraft service endpoints in the inspected source. Do not enter or save Microsoft credentials in an unreviewed build.
 
@@ -38,6 +39,12 @@ Microsoft authentication code communicates with Microsoft/Xbox/Minecraft service
 6. Do not include stealth, anti-detection, server-ban bypass, or exploit-oriented behavior.
 7. Keep network/account features disabled until their data flows and storage are reviewed.
 8. Run the 1.21.11 Gradle build and fix compiler/mixin failures before calling the branch usable.
+
+### Mapping/build migration
+
+Aoba 1.21.6 uses Yarn mappings and Loom 1.10. The existing Fizzy 1.21.11 scaffold uses Mojang mappings and Loom 1.14. Fabric's 1.21.11 guidance recommends Loom 1.14 and moving toward Mojang mappings because 1.21.11 is the final obfuscated release and Yarn is not planned to continue beyond it. The safe route is therefore a staged source-mapping migration, followed by the 1.21.11 API/mixin port—not a blind version bump.
+
+The uploaded archive's Gradle wrapper could not run in this environment because it attempted to download Gradle 8.12.1 from `services.gradle.org`, and outbound DNS/network access is unavailable here. The GitHub Actions build will be needed for an online compile check after source files are imported.
 
 ## Current status
 
