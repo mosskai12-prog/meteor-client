@@ -3,6 +3,8 @@ package com.fizzy.client.gui;
 import com.fizzy.client.FizzyClient;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
 import java.util.LinkedHashMap;
@@ -169,7 +171,10 @@ public final class ClickGuiScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(MouseButtonEvent click, boolean doubled) {
+        double mouseX = click.x();
+        double mouseY = click.y();
+        int button = click.button();
         if (selectedModule != null) {
             selectedModule = null;
             return true;
@@ -186,16 +191,16 @@ public final class ClickGuiScreen extends Screen {
                 return true;
             }
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(click, doubled);
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 256 || keyCode == 344) {
+    public boolean keyPressed(KeyEvent event) {
+        if (event.key() == 256 || event.key() == 344) {
             onClose();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     private static boolean contains(Rect rect, double x, double y) {

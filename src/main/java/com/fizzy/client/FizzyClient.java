@@ -20,7 +20,7 @@ public final class FizzyClient implements ClientModInitializer {
     public void onInitializeClient() {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             boolean rightShiftDown = GLFW.glfwGetKey(
-                client.getWindow().getWindow(),
+                client.getWindow().handle(),
                 GLFW.GLFW_KEY_RIGHT_SHIFT
             ) == GLFW.GLFW_PRESS;
 
