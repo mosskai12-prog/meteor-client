@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.entity.EquipmentSlot;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -97,7 +98,10 @@ public final class ModuleManager {
         if (isEnabled("Keystrokes")) drawKeystrokes(g, client, 10, 82);
         if (isEnabled("Armor HUD")) {
             int armorY = 10;
-            for (var stack : client.player.getArmorSlots()) {
+            for (EquipmentSlot slot : new EquipmentSlot[] {
+                EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET
+            }) {
+                var stack = client.player.getItemBySlot(slot);
                 if (!stack.isEmpty()) {
                     String label = stack.getHoverName().getString() + "  " +
                         (stack.isDamageableItem() ? (stack.getMaxDamage() - stack.getDamageValue()) + " durability" : "no durability");
