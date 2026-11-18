@@ -15,6 +15,7 @@ import meteordevelopment.orbit.EventHandler;
  */
 public class Sell extends Module {
     private boolean inventoryWasFull;
+    private int checkTicks;
 
     public Sell() {
         super(Categories.World, "sell", "Automatically sends /sell when your inventory is full.");
@@ -23,16 +24,21 @@ public class Sell extends Module {
     @Override
     public void onActivate() {
         inventoryWasFull = false;
+        checkTicks = 0;
     }
 
     @Override
     public void onDeactivate() {
         inventoryWasFull = false;
+        checkTicks = 0;
     }
 
     @EventHandler
     private void onTick(TickEvent.Pre event) {
         if (mc.player == null || mc.getNetworkHandler() == null) return;
+        // Inventory state only needs checking periodically; avoid doing it every tick.
+        if (++checkTicks < 20) return;
+        checkTicks = 0;
 
         boolean full = true;
         for (int slot = 0; slot < 36; slot++) {
