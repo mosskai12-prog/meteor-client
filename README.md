@@ -1,26 +1,30 @@
 # Fizzy Client
 
-Fizzy Client is being developed for **Minecraft Java 1.21.11** on Fabric.
+Fizzy Client is a Fabric client project targeting **Minecraft Java 1.21.11**.
 
-This migration workspace uses the **Aoba Client 1.21.6** source as its upstream reference. Aoba is licensed under **GNU GPL v3 or later**; Fizzy preserves that license for the port and retains upstream attribution. This project is not affiliated with or endorsed by the Aoba developers.
+## Click GUI
 
-## Current status
+Fizzy keeps the Aoba-derived Click GUI framework and its visual layout: category windows, navigation tabs, draggable/pinnable HUD windows, module rows, and per-module settings opened with right-click. The default accent is purple, and the interface uses Minecraft's built-in pixel font.
 
-This branch is a porting workspace, **not an installable release yet**. The existing independent Fizzy scaffold is still the working baseline while Aoba's source is migrated in stages. A version-number change alone is not a compatibility port.
+The Click GUI opens with **Right Shift**. Left-click a module to toggle it; right-click a module to open its settings.
 
-## Security decisions
+## Source and licence
 
-- Aoba Global Chat is not enabled or started.
-- Aoba's legacy Alt Manager token storage is not carried over unchanged.
-- Discord Rich Presence and third-party add-on loading must remain opt-in and be reviewed before use.
-- No bundled third-party add-ons or automatic downloads.
-- No claim is made that an unbuilt or untested JAR is malware-free.
+The GUI framework and portions of the client are derived from **Aoba Client**. Aoba is licensed under **GNU GPL v3 or later**. Fizzy preserves the GPL-3.0-or-later licence and upstream attribution. This project is not affiliated with or endorsed by the Aoba developers.
 
-## Build
+Upstream: https://github.com/Cocolots/Aoba-Client/tree/1.21.6
 
-Requires JDK 21. Run `./gradlew build` from a machine with internet access so Gradle can resolve Fabric/Minecraft dependencies.
+## Safety choices in this branch
 
-## Upstream
+- Aoba Global Chat is not started.
+- Third-party Fabric entrypoints for Aoba add-ons are not automatically loaded.
+- Discord Rich Presence is removed from the default module registry.
+- The legacy Alt Manager is not initialized and its saved tokens are not written during shutdown.
+- The password-cracking window is not exposed in the Tools tab.
+- The main menu no longer makes an automatic request to Aoba's release API or opens an Aoba Discord invite.
 
-- Aoba Client source: https://github.com/Cocolots/Aoba-Client/tree/1.21.6
-- Aoba license: GNU GPL v3 or later
+These changes reduce unnecessary external behavior; they are not a guarantee that every source file or dependency is vulnerability-free. Review the code and dependencies before running a built JAR.
+
+## Build status
+
+This is a development branch, **not yet a verified release**. It has not been confirmed to compile successfully against Minecraft 1.21.11. Build with JDK 21 and run `./gradlew build` on a machine with internet access to resolve Gradle dependencies.
