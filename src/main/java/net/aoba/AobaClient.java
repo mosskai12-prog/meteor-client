@@ -21,6 +21,7 @@ import net.aoba.managers.EntityManager;
 import net.aoba.managers.EventManager;
 import net.aoba.managers.ModuleManager;
 import net.aoba.managers.SettingManager;
+import net.aoba.managers.altmanager.AltManager;
 import net.aoba.managers.macros.MacroManager;
 import net.aoba.managers.proxymanager.ProxyManager;
 import net.aoba.managers.rotation.RotationManager;
@@ -43,6 +44,8 @@ public class AobaClient {
 	public RotationManager rotationManager;
 	public ModuleManager moduleManager;
 	public CommandManager commandManager;
+	// Retained only for legacy screen source compatibility; Fizzy does not initialize or persist it.
+	public AltManager altManager;
 	public ProxyManager proxyManager;
 	public GuiManager guiManager;
 	public FontManager fontManager;
