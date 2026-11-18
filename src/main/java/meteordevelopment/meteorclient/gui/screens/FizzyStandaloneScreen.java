@@ -34,6 +34,8 @@ public final class FizzyStandaloneScreen extends Screen {
     private double dragX, dragY;
     private String theme = "Purple Haze";
     private boolean themesOpen;
+    private Setting<?> sliderSetting;
+    private double sliderX, sliderW;
 
     public FizzyStandaloneScreen() {
         super(Text.literal("Fizzy Client"));
@@ -234,7 +236,26 @@ public final class FizzyStandaloneScreen extends Screen {
                 cy += ROW_H;
                 if (expanded.getOrDefault(module, false)) {
                     for (SettingGroup group : module.settings) {
-                        for (Setting<?> setting : group) if (setting.isVisible()) cy += 17;
+                        for (Setting<?> setting : group) {
+                            if (!setting.isVisible()) continue;
+                            if (mx >= x + PAD && mx <= x + PANEL_W - PAD && my >= cy && my <= cy + 17) {
+                                if (setting instanceof BoolSetting bool) bool.set(!bool.get());
+                                else if (setting instanceof EnumSetting<?> mode) {
+                                    List<String> options = mode.getSuggestions();
+                                    if (!options.isEmpty()) {
+                                        int current = options.indexOf(mode.get().toString());
+                                        mode.parse(options.get((current + 1) % options.size()));
+                                    }
+                                } else if (setting instanceof IntSetting || setting instanceof DoubleSetting) {
+                                    sliderSetting = setting;
+                                    sliderX = x + PAD + 5;
+                                    sliderW = PANEL_W - PAD * 2 - 10;
+                                    updateSlider(mx);
+                                }
+                                return true;
+                            }
+                            cy += 17;
+                        }
                     }
                     cy += 4;
                 }
@@ -244,10 +265,26 @@ public final class FizzyStandaloneScreen extends Screen {
         return super.mouseClicked(click, doubled);
     }
 
+    private void updateSlider(double mouseX) {
+        if (sliderSetting == null || sliderW <= 0) return;
+        double ratio = Math.max(0, Math.min(1, (mouseX - sliderX) / sliderW));
+        if (sliderSetting instanceof IntSetting setting) {
+            int value = (int) Math.round(setting.sliderMin + (setting.sliderMax - setting.sliderMin) * ratio);
+            sliderSetting.set(value);
+        } else if (sliderSetting instanceof DoubleSetting setting) {
+            double value = setting.sliderMin + (setting.sliderMax - setting.sliderMin) * ratio;
+            sliderSetting.set(value);
+        }
+    }
+
     @Override
     public boolean mouseDragged(Click click, double offsetX, double offsetY) {
         if (dragging != null) {
             positions.put(dragging, new int[]{(int)(click.x() - dragX), (int)(click.y() - dragY)});
+            return true;
+        }
+        if (sliderSetting != null) {
+            updateSlider(click.x());
             return true;
         }
         return super.mouseDragged(click, offsetX, offsetY);
@@ -258,6 +295,10 @@ public final class FizzyStandaloneScreen extends Screen {
         if (dragging != null) {
             dragging = null;
             saveLayout();
+            return true;
+        }
+        if (sliderSetting != null) {
+            sliderSetting = null;
             return true;
         }
         return super.mouseReleased(click);
