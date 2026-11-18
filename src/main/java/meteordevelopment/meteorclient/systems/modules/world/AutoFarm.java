@@ -5,8 +5,6 @@
 package meteordevelopment.meteorclient.systems.modules.world;
 
 import meteordevelopment.meteorclient.events.world.TickEvent;
-import meteordevelopment.meteorclient.pathing.BaritoneUtils;
-import meteordevelopment.meteorclient.pathing.PathManagers;
 import meteordevelopment.meteorclient.settings.BoolSetting;
 import meteordevelopment.meteorclient.settings.DoubleSetting;
 import meteordevelopment.meteorclient.settings.IntSetting;
@@ -68,10 +66,8 @@ public class AutoFarm extends Module {
     );
 
     private int ticks;
-    private BlockPos pathTarget;
     private BlockPos replantTarget;
     private Block replantCrop;
-    private boolean warnedNoPathing;
     private Iterator<BlockPos> scanIterator;
     private BlockPos scanBest;
     private BlockPos cachedCrop;
@@ -85,10 +81,8 @@ public class AutoFarm extends Module {
     @Override
     public void onActivate() {
         ticks = 0;
-        pathTarget = null;
         replantTarget = null;
         replantCrop = null;
-        warnedNoPathing = false;
         scanIterator = null;
         scanBest = null;
         cachedCrop = null;
@@ -97,8 +91,7 @@ public class AutoFarm extends Module {
 
     @Override
     public void onDeactivate() {
-        if (pathTarget != null && BaritoneUtils.IS_AVAILABLE) PathManagers.get().stop();
-        pathTarget = null;
+        stopWalking();
         replantTarget = null;
         replantCrop = null;
         scanIterator = null;
@@ -124,7 +117,7 @@ public class AutoFarm extends Module {
         BlockPos crop = cachedCrop;
         if (crop == null || !isMatureCrop(mc.world.getBlockState(crop))) {
             cachedCrop = null;
-            stopPathing();
+            stopWalking();
             return;
         }
 
@@ -133,7 +126,7 @@ public class AutoFarm extends Module {
             return;
         }
 
-        stopPathing();
+        stopWalking();
         BlockState state = mc.world.getBlockState(crop);
         Block block = state.getBlock();
         selectBestTool(state);
@@ -202,24 +195,37 @@ public class AutoFarm extends Module {
         return state.get(CropBlock.AGE) >= CropBlock.MAX_AGE;
     }
 
+    // Walk toward the target using ordinary client movement keys. This does not
+    // require Baritone and deliberately leaves the camera facing where the player
+    // was looking, so farming does not cause sudden head turns.
     private void walkTo(BlockPos crop) {
-        if (!BaritoneUtils.IS_AVAILABLE) {
-            if (!warnedNoPathing) {
-                warning("Install/enable Baritone to walk to crops. Nearby crops can still be farmed.");
-                warnedNoPathing = true;
-            }
+        double dx = crop.getX() + 0.5 - mc.player.getX();
+        double dz = crop.getZ() + 0.5 - mc.player.getZ();
+        double length = Math.sqrt(dx * dx + dz * dz);
+
+        if (length < 0.05) {
+            stopWalking();
             return;
         }
 
-        if (pathTarget == null || !pathTarget.equals(crop) || !PathManagers.get().isPathing()) {
-            pathTarget = crop.toImmutable();
-            PathManagers.get().moveTo(pathTarget);
-        }
+        dx /= length;
+        dz /= length;
+
+        double yaw = Math.toRadians(mc.player.getYaw());
+        double forward = -dx * Math.sin(yaw) + dz * Math.cos(yaw);
+        double sideways = dx * Math.cos(yaw) + dz * Math.sin(yaw);
+
+        mc.options.forwardKey.setPressed(forward > 0.25);
+        mc.options.backKey.setPressed(forward < -0.25);
+        mc.options.leftKey.setPressed(sideways < -0.25);
+        mc.options.rightKey.setPressed(sideways > 0.25);
     }
 
-    private void stopPathing() {
-        if (pathTarget != null && BaritoneUtils.IS_AVAILABLE) PathManagers.get().stop();
-        pathTarget = null;
+    private void stopWalking() {
+        mc.options.forwardKey.setPressed(false);
+        mc.options.backKey.setPressed(false);
+        mc.options.leftKey.setPressed(false);
+        mc.options.rightKey.setPressed(false);
     }
 
     private void selectBestTool(BlockState state) {
