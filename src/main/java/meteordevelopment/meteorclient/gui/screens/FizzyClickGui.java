@@ -23,7 +23,7 @@ import static org.lwjgl.glfw.GLFW.*;
 
 final class FizzyClickGui extends WWidget {
     // Layout constants are in GUI-scaled units.
-    private static final double PANEL_W = 110, PANEL_H = 202, GAP = 8;
+    private static final double PANEL_W = 230, PANEL_H = 300, GAP = 8;
     private static final double HEADER_H = 22, ROW_H = 18, ROW_GAP = 3, PAD = 5;
     private static final Color PANEL = new Color(18, 14, 26, 225);
     private static final Color BORDER = new Color(42, 34, 54, 185);
@@ -37,6 +37,7 @@ final class FizzyClickGui extends WWidget {
     private static final Color SETTING_BG = new Color(15, 12, 21, 245);
 
     private final List<Category> categories = new ArrayList<>();
+    private int selectedCategory;
     private final Map<Module, Boolean> expanded = new HashMap<>();
     private final Map<Module, Double> expansion = new HashMap<>();
     private final Map<Category, Double> scroll = new HashMap<>();
@@ -55,10 +56,14 @@ final class FizzyClickGui extends WWidget {
     @Override protected void onCalculateWidgetPositions() { x = 0; y = 0; width = getWindowWidth(); height = getWindowHeight(); }
 
     private double s(double n) { return theme.scale(n); }
-    private double panelY() { return Math.max(s(12), (height - s(PANEL_H)) / 2); }
-    private double totalWidth() { return categories.size() * s(PANEL_W) + Math.max(0, categories.size() - 1) * s(GAP); }
-    private double startX() { return (width - totalWidth()) / 2; }
-    private double panelX(int i) { return startX() + i * s(PANEL_W + GAP); }
+    private double panelY() { return s(91); }
+    private double panelX() { return (width - s(PANEL_W)) / 2; }
+    private double tabsWidth() { return categories.size() * s(65); }
+    private double tabsX() { return (width - tabsWidth()) / 2; }
+    private double tabY() { return s(66); }
+    private boolean overTab(double mx, double my) {
+        return my >= tabY() && my <= tabY() + s(19) && mx >= tabsX() && mx <= tabsX() + tabsWidth();
+    }
     private static double ease(double current, double target, double speed, double dt) {
         return current + (target - current) * (1 - Math.exp(-speed * Math.min(dt, 0.05)));
     }
@@ -113,71 +118,70 @@ final class FizzyClickGui extends WWidget {
 
     @Override
     protected void onRender(GuiRenderer r, double mx, double my, double delta) {
-        double px0 = startX(), py = panelY(), pw = s(PANEL_W), ph = Math.min(s(PANEL_H), height - s(24));
-        // Gentle dim, leaving the world visible.
+        double px = panelX(), py = panelY(), pw = s(PANEL_W), ph = Math.min(s(PANEL_H), height - py - s(12));
         r.quad(0, 0, width, height, new Color(0, 0, 0, 82));
         drawSearchBar(r);
-        for (int ci = 0; ci < categories.size(); ci++) {
-            Category category = categories.get(ci);
-            double px = panelX(ci);
-            double entrance = Math.min(1, Math.max(0, 1 - Math.pow(1 - Math.min(1, (delta * 0 + 1)), 3)));
-            rounded(r, px + s(1), py + s(2), pw, ph, s(5), new Color(0, 0, 0, 75));
-            rounded(r, px, py, pw, ph, s(5), PANEL);
-            rounded(r, px, py, pw, ph, s(5), BORDER);
-            // Inner panel fill keeps the border subtle.
-            rounded(r, px + s(0.7), py + s(0.7), pw - s(1.4), ph - s(1.4), s(4.5), PANEL);
 
-            String icon = switch (category.name.toLowerCase(Locale.ROOT)) {
-                case "combat" -> "⚔";
-                case "movement" -> "⌁";
-                case "render" -> "◉";
-                case "player" -> "♟";
-                default -> "⚙";
-            };
-            String heading = icon + " " + category.name;
-            double titleW = theme.textWidth(heading, heading.length(), false);
-            r.text(heading, px + (pw - titleW) / 2, py + s(7), TEXT, false);
-            r.quad(px + s(4), py + s(HEADER_H), pw - s(8), s(0.7), BORDER);
-
-            double top = py + s(HEADER_H + 5);
-            double bottom = py + ph - s(5);
-            double offset = scroll.getOrDefault(category, 0.0);
-            r.scissorStart(px + s(2), top, pw - s(4), bottom - top);
-            double cy = top - offset;
-            for (Module module : modules(category)) {
-                double rowY = cy;
-                boolean hover = mx >= px + s(PAD) && mx <= px + pw - s(PAD) && my >= rowY && my <= rowY + s(ROW_H);
-                double ha = hoverAnim.compute(module, (k,v) -> ease(v == null ? 0 : v, hover ? 1 : 0, 17, delta));
-                double ea = enabledAnim.compute(module, (k,v) -> ease(v == null ? (module.isActive() ? 1 : 0) : v, module.isActive() ? 1 : 0, 15, delta));
-                double open = expansion.compute(module, (k,v) -> ease(v == null ? (expanded.getOrDefault(module, false) ? 1 : 0) : v, expanded.getOrDefault(module, false) ? 1 : 0, 18, delta));
-                Color rowColor = mix(ROW, ROW_HOVER, ha);
-                rounded(r, px + s(PAD), rowY, pw - s(PAD * 2), s(ROW_H), s(3), rowColor);
-                if (ea > 0.01) rounded(r, px + s(PAD), rowY, pw - s(PAD * 2), s(ROW_H), s(3), new Color(ACCENT.r, ACCENT.g, ACCENT.b, (int)(22 * ea)));
-                Color label = mix(MUTED, ACCENT, ea);
-                double tw = theme.textWidth(module.title, module.title.length(), false);
-                r.text(module.title, px + (pw - tw) / 2, rowY + s(5), label, false);
-                // Settings state dot: green when open, red when closed.
-                boolean isOpen = expanded.getOrDefault(module, false);
-                r.quad(px + pw - s(8), rowY + s(8), s(2.5), s(2.5), isOpen ? GREEN : RED);
-                cy += s(ROW_H + ROW_GAP);
-                double fullSettings = settingsHeight(module);
-                if (fullSettings > 0 || open > 0.015) {
-                    double drawH = fullSettings * open;
-                    rounded(r, px + s(PAD), cy, pw - s(PAD * 2), drawH, s(3), SETTING_BG);
-                    double sy = cy + s(3);
-                    for (SettingGroup group : module.settings) {
-                        if (!group.sectionExpanded) continue;
-                        for (Setting<?> setting : group) {
-                            if (!setting.isVisible()) continue;
-                            drawSetting(r, setting, px + s(PAD + 4), sy, pw - s(PAD * 2 + 8), mx, my);
-                            sy += settingHeight(setting);
-                        }
-                    }
-                    cy += drawH;
-                }
-            }
-            r.scissorEnd();
+        // Category tabs replace the old spread-out columns.
+        for (int i = 0; i < categories.size(); i++) {
+            Category category = categories.get(i);
+            double tx = tabsX() + i * s(65), ty = tabY(), tw = s(61), th = s(19);
+            boolean active = i == selectedCategory;
+            rounded(r, tx, ty, tw, th, s(4), active ? new Color(54, 34, 69, 250) : PANEL);
+            rounded(r, tx, ty, tw, s(1), s(0.5), active ? ACCENT : BORDER);
+            String name = category.name;
+            double textW = theme.textWidth(name, name.length(), false);
+            r.text(name, tx + (tw - textW) / 2, ty + s(6), active ? ACCENT : MUTED, false);
         }
+
+        if (categories.isEmpty()) return;
+        Category category = categories.get(Math.max(0, Math.min(selectedCategory, categories.size() - 1)));
+        rounded(r, px + s(1), py + s(2), pw, ph, s(6), new Color(0, 0, 0, 75));
+        rounded(r, px, py, pw, ph, s(6), PANEL);
+        rounded(r, px, py, pw, ph, s(6), BORDER);
+        rounded(r, px + s(0.7), py + s(0.7), pw - s(1.4), ph - s(1.4), s(5), PANEL);
+
+        String heading = category.name + " MODULES";
+        double titleW = theme.textWidth(heading, heading.length(), false);
+        r.text(heading, px + (pw - titleW) / 2, py + s(7), ACCENT, false);
+        r.quad(px + s(6), py + s(HEADER_H), pw - s(12), s(0.7), BORDER);
+
+        double top = py + s(HEADER_H + 5);
+        double bottom = py + ph - s(5);
+        double offset = scroll.getOrDefault(category, 0.0);
+        r.scissorStart(px + s(3), top, pw - s(6), bottom - top);
+        double cy = top - offset;
+        for (Module module : modules(category)) {
+            double rowY = cy;
+            boolean hover = mx >= px + s(PAD) && mx <= px + pw - s(PAD) && my >= rowY && my <= rowY + s(ROW_H);
+            double ha = hoverAnim.compute(module, (k,v) -> ease(v == null ? 0 : v, hover ? 1 : 0, 17, delta));
+            double ea = enabledAnim.compute(module, (k,v) -> ease(v == null ? (module.isActive() ? 1 : 0) : v, module.isActive() ? 1 : 0, 15, delta));
+            double open = expansion.compute(module, (k,v) -> ease(v == null ? (expanded.getOrDefault(module, false) ? 1 : 0) : v, expanded.getOrDefault(module, false) ? 1 : 0, 18, delta));
+            rounded(r, px + s(PAD), rowY, pw - s(PAD * 2), s(ROW_H), s(3), mix(ROW, ROW_HOVER, ha));
+            if (ea > 0.01) rounded(r, px + s(PAD), rowY, pw - s(PAD * 2), s(ROW_H), s(3), new Color(ACCENT.r, ACCENT.g, ACCENT.b, (int)(22 * ea)));
+            Color label = mix(MUTED, ACCENT, ea);
+            double tw = theme.textWidth(module.title, module.title.length(), false);
+            r.text(module.title, px + s(PAD + 8), rowY + s(5), label, false);
+            boolean isOpen = expanded.getOrDefault(module, false);
+            r.quad(px + pw - s(10), rowY + s(8), s(2.5), s(2.5), isOpen ? GREEN : RED);
+            cy += s(ROW_H + ROW_GAP);
+            double fullSettings = settingsHeight(module);
+            if (fullSettings > 0 || open > 0.015) {
+                double drawH = fullSettings * open;
+                rounded(r, px + s(PAD), cy, pw - s(PAD * 2), drawH, s(3), SETTING_BG);
+                double sy = cy + s(3);
+                for (SettingGroup group : module.settings) {
+                    if (!group.sectionExpanded) continue;
+                    for (Setting<?> setting : group) {
+                        if (!setting.isVisible()) continue;
+                        drawSetting(r, setting, px + s(PAD + 4), sy, pw - s(PAD * 2 + 8), mx, my);
+                        sy += settingHeight(setting);
+                    }
+                }
+                cy += drawH;
+            }
+        }
+        r.scissorEnd();
         drawThemesTab(r);
     }
 
@@ -249,46 +253,49 @@ final class FizzyClickGui extends WWidget {
         if (button != GLFW_MOUSE_BUTTON_LEFT && button != GLFW_MOUSE_BUTTON_RIGHT && button != GLFW_MOUSE_BUTTON_MIDDLE) return false;
         if (isSearchBar(mx, my)) { searchFocused = true; return true; }
         searchFocused = false;
-        for (int ci = 0; ci < categories.size(); ci++) {
-            Category category = categories.get(ci);
-            double px = panelX(ci), py = panelY(), pw = s(PANEL_W), ph = s(PANEL_H);
-            if (mx < px || mx > px + pw || my < py || my > py + ph) continue;
-            double cy = py + s(HEADER_H + 5) - scroll.getOrDefault(category, 0.0);
-            for (Module module : modules(category)) {
-                if (mx >= px + s(PAD) && mx <= px + pw - s(PAD) && my >= cy && my <= cy + s(ROW_H)) {
-                    if (button == GLFW_MOUSE_BUTTON_LEFT) module.toggle();
-                    else if (button == GLFW_MOUSE_BUTTON_RIGHT && !module.settings.groups.isEmpty()) expanded.put(module, !expanded.getOrDefault(module, false));
-                    else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
-                        mc.setScreen(theme.moduleScreen(module));
-                    }
-                    return true;
-                }
-                cy += s(ROW_H + ROW_GAP);
-                if (expanded.getOrDefault(module, false)) {
-                    for (SettingGroup group : module.settings) {
-                        if (!group.sectionExpanded) continue;
-                        for (Setting<?> setting : group) {
-                            if (!setting.isVisible()) continue;
-                            double sh = settingHeight(setting);
-                            if (my >= cy && my <= cy + sh && mx >= px + s(PAD) && mx <= px + pw - s(PAD)) {
-                                if (setting instanceof BoolSetting bool) bool.set(!bool.get());
-                                else if (setting instanceof EnumSetting<?> mode) cycleMode(mode);
-                                else if (setting instanceof IntSetting || setting instanceof DoubleSetting) {
-                                    sliderDragging = module;
-                                    draggingSetting = setting;
-                                    updateSlider(setting, mx, px + s(PAD + 4), pw - s(PAD * 2 + 8));
-                                }
-                                return true;
-                            }
-                            cy += sh;
-                        }
-                    }
-                    cy += s(3);
-                }
-            }
+
+        if (overTab(mx, my) && button == GLFW_MOUSE_BUTTON_LEFT) {
+            int index = (int)((mx - tabsX()) / s(65));
+            if (index >= 0 && index < categories.size()) selectedCategory = index;
             return true;
         }
-        return false;
+        if (categories.isEmpty()) return false;
+        Category category = categories.get(Math.max(0, Math.min(selectedCategory, categories.size() - 1)));
+        double px = panelX(), py = panelY(), pw = s(PANEL_W), ph = Math.min(s(PANEL_H), height - py - s(12));
+        if (mx < px || mx > px + pw || my < py || my > py + ph) return false;
+
+        double cy = py + s(HEADER_H + 5) - scroll.getOrDefault(category, 0.0);
+        for (Module module : modules(category)) {
+            if (mx >= px + s(PAD) && mx <= px + pw - s(PAD) && my >= cy && my <= cy + s(ROW_H)) {
+                if (button == GLFW_MOUSE_BUTTON_LEFT) module.toggle();
+                else if (button == GLFW_MOUSE_BUTTON_RIGHT && !module.settings.groups.isEmpty()) expanded.put(module, !expanded.getOrDefault(module, false));
+                else if (button == GLFW_MOUSE_BUTTON_MIDDLE) mc.setScreen(theme.moduleScreen(module));
+                return true;
+            }
+            cy += s(ROW_H + ROW_GAP);
+            if (expanded.getOrDefault(module, false)) {
+                for (SettingGroup group : module.settings) {
+                    if (!group.sectionExpanded) continue;
+                    for (Setting<?> setting : group) {
+                        if (!setting.isVisible()) continue;
+                        double sh = settingHeight(setting);
+                        if (my >= cy && my <= cy + sh && mx >= px + s(PAD) && mx <= px + pw - s(PAD)) {
+                            if (setting instanceof BoolSetting bool) bool.set(!bool.get());
+                            else if (setting instanceof EnumSetting<?> mode) cycleMode(mode);
+                            else if (setting instanceof IntSetting || setting instanceof DoubleSetting) {
+                                sliderDragging = module;
+                                draggingSetting = setting;
+                                updateSlider(setting, mx, px + s(PAD + 4), pw - s(PAD * 2 + 8));
+                            }
+                            return true;
+                        }
+                        cy += sh;
+                    }
+                }
+                cy += s(3);
+            }
+        }
+        return true;
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
@@ -315,13 +322,8 @@ final class FizzyClickGui extends WWidget {
     @Override
     public void onMouseMoved(double mouseX, double mouseY, double lastMouseX, double lastMouseY) {
         if (draggingSetting != null) {
-            for (int ci = 0; ci < categories.size(); ci++) {
-                double px = panelX(ci), pw = s(PANEL_W);
-                if (mouseX >= px && mouseX <= px + pw) {
-                    updateSlider(draggingSetting, mouseX, px + s(PAD + 4), pw - s(PAD * 2 + 8));
-                    break;
-                }
-            }
+            double px = panelX(), pw = s(PANEL_W);
+            if (mouseX >= px && mouseX <= px + pw) updateSlider(draggingSetting, mouseX, px + s(PAD + 4), pw - s(PAD * 2 + 8));
         }
     }
 
@@ -334,18 +336,16 @@ final class FizzyClickGui extends WWidget {
 
     @Override
     public boolean onMouseScrolled(double amount) {
+        if (categories.isEmpty()) return false;
         double mx = mc.mouse.getX() / mc.getWindow().getScaleFactor();
         double my = mc.mouse.getY() / mc.getWindow().getScaleFactor();
-        for (int i = 0; i < categories.size(); i++) {
-            Category c = categories.get(i);
-            double px = panelX(i), py = panelY();
-            if (mx >= px && mx <= px + s(PANEL_W) && my >= py && my <= py + s(PANEL_H)) {
-                double max = Math.max(0, contentHeight(c) - s(PANEL_H - HEADER_H - 10));
-                scroll.put(c, Math.max(0, Math.min(max, scroll.getOrDefault(c, 0.0) - amount * s(18))));
-                return true;
-            }
-        }
-        return false;
+        double px = panelX(), py = panelY();
+        if (mx < px || mx > px + s(PANEL_W) || my < py || my > py + s(PANEL_H)) return false;
+        Category category = categories.get(Math.max(0, Math.min(selectedCategory, categories.size() - 1)));
+        double panelHeight = Math.min(s(PANEL_H), height - py - s(12));
+        double max = Math.max(0, contentHeight(category) - (panelHeight - s(HEADER_H + 10)));
+        scroll.put(category, Math.max(0, Math.min(max, scroll.getOrDefault(category, 0.0) - amount * s(18))));
+        return true;
     }
 
     @Override
