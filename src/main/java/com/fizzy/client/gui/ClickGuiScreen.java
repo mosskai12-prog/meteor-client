@@ -24,7 +24,7 @@ public final class ClickGuiScreen extends Screen {
         new Category("COMBAT", "C", List.of()),
         new Category("MOVEMENT", "M", List.of("Toggle Sprint")),
         new Category("RENDER", "R", List.of("FPS Display", "Coordinates", "Keystrokes")),
-        new Category("WORLD", "W", List.of()),
+        new Category("BASE HUNT", "B", List.of("Base Hunting", "Storage Finder", "Portal Finder", "Spawner Finder")),
         new Category("MISC", "⋯", List.of())
     );
 
@@ -71,7 +71,7 @@ public final class ClickGuiScreen extends Screen {
         g.drawString(font, "CLIENT", left + 56, top + 27, PURPLE, false);
         g.drawString(font, "INDEPENDENT CLIENT  •  1.21.11", left + 142, top + 21, MUTED, false);
 
-        String status = "4 WORKING MODULES";
+        String status = "8 MODULES";
         int statusWidth = font.width(status) + 18;
         roundRect(g, left + drawWidth - statusWidth - 20, top + 17, statusWidth, 22, 7, 0xFF302A3D);
         g.drawString(font, status, left + drawWidth - statusWidth - 11, top + 24, PURPLE, false);
@@ -101,21 +101,17 @@ public final class ClickGuiScreen extends Screen {
                 boolean hovered = contains(rect, mouseX, mouseY);
                 boolean active = FizzyClient.MODULES.isEnabled(module);
 
-                roundRect(g, x, moduleY, colWidth, cardHeight, 7,
-                    hovered ? CARD_HOVER : CARD);
+                roundRect(g, x, moduleY, colWidth, cardHeight, 7, hovered ? CARD_HOVER : CARD);
                 g.drawString(font, module, x + 8, moduleY + 8,
                     active ? WHITE : 0xFFD4D0DD, false);
 
                 int switchX = x + colWidth - 29;
                 int switchY = moduleY + 12;
-                roundRect(g, switchX, switchY, 21, 13, 7,
-                    active ? PURPLE_DARK : 0xFF4A4655);
+                roundRect(g, switchX, switchY, 21, 13, 7, active ? PURPLE_DARK : 0xFF4A4655);
                 roundRect(g, active ? switchX + 11 : switchX + 2, switchY + 2, 9, 9, 5,
                     active ? 0xFFFFFFFF : 0xFFB8B3C1);
 
-                if (hovered) {
-                    g.drawString(font, "Right-click: info", x + 8, moduleY + 25, MUTED, false);
-                }
+                if (hovered) g.drawString(font, "Right-click: info", x + 8, moduleY + 25, MUTED, false);
                 moduleY += cardHeight + 7;
             }
 
@@ -134,8 +130,8 @@ public final class ClickGuiScreen extends Screen {
     }
 
     private void renderSettings(GuiGraphics g, int left, int top, int panelWidth, int panelHeight) {
-        int w = 290;
-        int h = 154;
+        int w = 310;
+        int h = 170;
         int x = left + (panelWidth - w) / 2;
         int y = top + (panelHeight - h) / 2;
         roundRect(g, x - 5, y - 5, w + 10, h + 10, 12, 0xCC08070D);
@@ -147,11 +143,17 @@ public final class ClickGuiScreen extends Screen {
             case "FPS Display" -> "Shows your current frames per second.";
             case "Coordinates" -> "Shows your current block coordinates.";
             case "Keystrokes" -> "Displays live WASD and jump key presses.";
+            case "Base Hunting" -> "Scans loaded nearby blocks for storage, portals and spawners.";
+            case "Storage Finder" -> "Lists nearby loaded chests, barrels and ender chests.";
+            case "Portal Finder" -> "Lists nearby Nether portal blocks in loaded chunks.";
+            case "Spawner Finder" -> "Lists nearby visible mob spawner blocks.";
             default -> "This module is not implemented yet.";
         };
         drawWrapped(g, description, x + 16, y + 66, w - 32, MUTED);
-        roundRect(g, x + 16, y + 116, w - 32, 25, 7, 0xFF393047);
-        centered(g, "CLICK ANYWHERE TO CLOSE", x + 16, y + 116, w - 32, 25, WHITE);
+        String note = "Scan radius: 16 blocks  •  Refresh: 1 sec";
+        g.drawString(font, note, x + 16, y + 126, 0xFFB8AFC7, false);
+        roundRect(g, x + 16, y + 140, w - 32, 22, 7, 0xFF393047);
+        centered(g, "CLICK ANYWHERE TO CLOSE", x + 16, y + 140, w - 32, 22, WHITE);
     }
 
     private void drawWrapped(GuiGraphics g, String text, int x, int y, int maxWidth, int color) {

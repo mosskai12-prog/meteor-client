@@ -2,7 +2,6 @@ package com.fizzy.client.module;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.resources.Identifier;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -15,12 +14,17 @@ public final class ModuleManager {
     private static final int PURPLE = 0xFFB18AFF;
     private static final int BACKGROUND = 0xAA171420;
     private final Map<String, Boolean> states = new LinkedHashMap<>();
+    private final BaseHuntingScanner baseHunting = new BaseHuntingScanner();
 
     public ModuleManager() {
         states.put("Toggle Sprint", false);
         states.put("FPS Display", false);
         states.put("Coordinates", false);
         states.put("Keystrokes", false);
+        states.put("Base Hunting", false);
+        states.put("Storage Finder", false);
+        states.put("Portal Finder", false);
+        states.put("Spawner Finder", false);
         load();
     }
 
@@ -39,13 +43,19 @@ public final class ModuleManager {
     }
 
     public void tick(Minecraft client) {
-        if (client.player == null || client.screen != null) return;
+        if (client.player == null || client.level == null) return;
 
-        if (isEnabled("Toggle Sprint")
+        if (client.screen == null && isEnabled("Toggle Sprint")
             && client.options.keyUp.isDown()
             && !client.options.keyShift.isDown()) {
             client.player.setSprinting(true);
         }
+
+        baseHunting.tick(client,
+            isEnabled("Base Hunting"),
+            isEnabled("Storage Finder"),
+            isEnabled("Portal Finder"),
+            isEnabled("Spawner Finder"));
     }
 
     public void renderHud(GuiGraphics graphics, Minecraft client) {
@@ -61,11 +71,18 @@ public final class ModuleManager {
             String coords = String.format("XYZ  %d  %d  %d",
                 client.player.getBlockX(), client.player.getBlockY(), client.player.getBlockZ());
             drawLine(graphics, coords, 10, y);
+            y += 20;
         }
 
         if (isEnabled("Keystrokes")) {
             drawKeystrokes(graphics, client, 10, 82);
         }
+
+        baseHunting.renderHud(graphics, client, y,
+            isEnabled("Base Hunting"),
+            isEnabled("Storage Finder"),
+            isEnabled("Portal Finder"),
+            isEnabled("Spawner Finder"));
     }
 
     private void drawKeystrokes(GuiGraphics g, Minecraft client, int x, int y) {
