@@ -1,31 +1,22 @@
 # Fizzy Client
 
-Fizzy Client is an independent Minecraft Java client project for Minecraft 1.21.11, built on Fabric.
+An independent Fabric client project for Minecraft 1.21.11.
 
-This repository is being rebuilt from a clean project structure. It does not use Meteor Client, Meteor modules, Meteor GUI classes, Orbit, or Meteor's internal libraries.
+## Current state
 
-## Requirements
-- JDK 21
-- Minecraft 1.21.11
-- Fabric Loader
+- Original Fizzy Click GUI screen (not Meteor's GUI).
+- Five category columns with a dark translucent theme and purple accents.
+- Right Shift opens the GUI.
+- Left-click a module card to toggle its saved UI state.
+- Right-click a module card to open its settings panel.
+- Module toggle states are stored in `config/fizzy-client.properties`.
+
+The current commit is the UI foundation. The listed module cards are placeholders; their actual gameplay and HUD features will be implemented independently in later steps. A saved toggle does not imply that a module's feature is implemented yet.
 
 ## Build
 
-Windows:
-```powershell
-.\gradlew.bat build
-```
+Requires JDK 21.
 
-Linux/macOS:
-```bash
+```sh
 ./gradlew build
 ```
-
-The remapped mod JAR is generated in `build/libs/`.
-
-## Project structure
-- `com.fizzy.client` — Fizzy's own entry point and client systems.
-- `com.fizzy.client.gui` — Fizzy-owned interface code.
-- `com.fizzy.client.modules` — Fizzy-owned module framework.
-
-The old Meteor-derived implementation is not part of this branch's source tree.

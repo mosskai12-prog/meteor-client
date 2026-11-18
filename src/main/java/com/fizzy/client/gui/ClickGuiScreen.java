@@ -1,0 +1,258 @@
+package com.fizzy.client.gui;
+
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+
+public final class ClickGuiScreen extends Screen {
+    private static final int PURPLE = 0xFF9B72F2;
+    private static final int PURPLE_DARK = 0xFF7046C8;
+    private static final int PANEL = 0xF0181721;
+    private static final int PANEL_LIGHT = 0xFF211F2D;
+    private static final int CARD = 0xFF292635;
+    private static final int CARD_HOVER = 0xFF343044;
+    private static final int MUTED = 0xFF9B96AA;
+    private static final int WHITE = 0xFFF4F1FA;
+
+    private static final List<Category> CATEGORIES = List.of(
+        new Category("COMBAT", "C", List.of("Target HUD", "Totem Counter", "Hit Sounds", "Combat Log")),
+        new Category("MOVEMENT", "M", List.of("Toggle Sprint", "Zoom", "Motion HUD", "Step Assist")),
+        new Category("RENDER", "R", List.of("FPS Display", "Coordinates", "Keystrokes", "Armor HUD")),
+        new Category("WORLD", "W", List.of("Waypoints", "Block Outline", "World Info", "Time Display")),
+        new Category("MISC", "⋯", List.of("Chat Timestamps", "Auto Reconnect", "Sound Alerts", "Client Settings"))
+    );
+
+    private final Map<String, Boolean> enabled = new LinkedHashMap<>();
+    private final Map<String, Rect> moduleRects = new LinkedHashMap<>();
+    private String selectedModule;
+    private float openProgress;
+    private float hoverPulse;
+    private double scrollOffset;
+
+    public ClickGuiScreen() {
+        super(Component.literal("Fizzy Client"));
+        for (Category category : CATEGORIES) {
+            for (String module : category.modules()) enabled.put(module, false);
+        }
+        loadSettings();
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
+
+    @Override
+    public void tick() {
+        openProgress = Math.min(1.0f, openProgress + 0.14f);
+        hoverPulse += 0.08f;
+    }
+
+    @Override
+    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        g.fill(0, 0, width, height, 0x9908060D);
+
+        int panelWidth = Math.min(1040, width - 36);
+        int panelHeight = Math.min(590, height - 36);
+        panelWidth = Math.max(520, panelWidth);
+        panelHeight = Math.max(340, panelHeight);
+
+        float eased = 1.0f - (float) Math.pow(1.0f - openProgress, 3);
+        int drawWidth = (int) (panelWidth * (0.94f + 0.06f * eased));
+        int drawHeight = (int) (panelHeight * (0.94f + 0.06f * eased));
+        int left = (width - drawWidth) / 2;
+        int top = (height - drawHeight) / 2;
+
+        roundRect(g, left, top, drawWidth, drawHeight, 12, PANEL);
+        roundRect(g, left + 1, top + 1, drawWidth - 2, 54, 11, 0xFF211E2B);
+        g.fill(left + 1, top + 48, left + drawWidth - 1, top + 55, 0xFF211E2B);
+
+        // Header
+        roundRect(g, left + 18, top + 13, 28, 28, 8, PURPLE_DARK);
+        centered(g, "F", left + 18, top + 13, 28, 28, WHITE);
+        g.drawString(font, "FIZZY", left + 56, top + 13, WHITE, false);
+        g.drawString(font, "CLIENT", left + 56, top + 27, PURPLE, false);
+        g.drawString(font, "INDEPENDENT CLIENT  •  1.21.11", left + 142, top + 21, MUTED, false);
+
+        String status = "GUI PREVIEW";
+        int statusWidth = font.width(status) + 18;
+        roundRect(g, left + drawWidth - statusWidth - 20, top + 17, statusWidth, 22, 7, 0xFF302A3D);
+        g.drawString(font, status, left + drawWidth - statusWidth - 11, top + 24, PURPLE, false);
+
+        int contentTop = top + 72;
+        int contentBottom = top + drawHeight - 18;
+        int gap = 10;
+        int innerLeft = left + 18;
+        int innerWidth = drawWidth - 36;
+        int colWidth = (innerWidth - gap * 4) / 5;
+        moduleRects.clear();
+
+        for (int i = 0; i < CATEGORIES.size(); i++) {
+            Category category = CATEGORIES.get(i);
+            int x = innerLeft + i * (colWidth + gap);
+
+            roundRect(g, x, contentTop, colWidth, 34, 7, 0xFF24212F);
+            roundRect(g, x + 7, contentTop + 7, 20, 20, 5, 0xFF393047);
+            centered(g, category.icon(), x + 7, contentTop + 7, 20, 20, PURPLE);
+            g.drawString(font, category.name(), x + 33, contentTop + 12, WHITE, false);
+
+            int moduleY = contentTop + 43;
+            for (String module : category.modules()) {
+                int cardHeight = 38;
+                Rect rect = new Rect(x, moduleY, colWidth, cardHeight);
+                moduleRects.put(module, rect);
+                boolean hovered = contains(rect, mouseX, mouseY);
+                boolean active = enabled.getOrDefault(module, false);
+
+                roundRect(g, x, moduleY, colWidth, cardHeight, 7,
+                    hovered ? CARD_HOVER : CARD);
+                g.drawString(font, module, x + 8, moduleY + 8,
+                    active ? WHITE : 0xFFD4D0DD, false);
+
+                int switchX = x + colWidth - 29;
+                int switchY = moduleY + 12;
+                roundRect(g, switchX, switchY, 21, 13, 7,
+                    active ? PURPLE_DARK : 0xFF4A4655);
+                roundRect(g, active ? switchX + 11 : switchX + 2, switchY + 2, 9, 9, 5,
+                    active ? 0xFFFFFFFF : 0xFFB8B3C1);
+
+                if (hovered) {
+                    g.drawString(font, "Right-click: settings", x + 8, moduleY + 25, MUTED, false);
+                }
+                moduleY += cardHeight + 7;
+            }
+        }
+
+        // Footer
+        g.fill(left + 18, contentBottom - 22, left + drawWidth - 18, contentBottom - 21, 0xFF393443);
+        g.drawString(font, "RIGHT SHIFT  •  CLOSE", left + 20, contentBottom - 13, MUTED, false);
+        String footer = "FIZZY  /  BUILT FROM SCRATCH";
+        g.drawString(font, footer, left + drawWidth - 20 - font.width(footer),
+            contentBottom - 13, 0xFF777184, false);
+
+        if (selectedModule != null) renderSettings(g, left, top, drawWidth, drawHeight);
+    }
+
+    private void renderSettings(GuiGraphics g, int left, int top, int panelWidth, int panelHeight) {
+        int w = 270;
+        int h = 150;
+        int x = left + (panelWidth - w) / 2;
+        int y = top + (panelHeight - h) / 2;
+        roundRect(g, x - 5, y - 5, w + 10, h + 10, 12, 0xCC08070D);
+        roundRect(g, x, y, w, h, 10, 0xFF24212F);
+        g.drawString(font, "MODULE SETTINGS", x + 16, y + 15, PURPLE, false);
+        g.drawString(font, selectedModule, x + 16, y + 38, WHITE, false);
+        g.drawString(font, "This module's controls will be", x + 16, y + 66, MUTED, false);
+        g.drawString(font, "added as its feature is rebuilt.", x + 16, y + 79, MUTED, false);
+        roundRect(g, x + 16, y + 108, w - 32, 26, 7, 0xFF393047);
+        centered(g, "LEFT-CLICK OUTSIDE TO CLOSE", x + 16, y + 108, w - 32, 26, WHITE);
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (selectedModule != null) {
+            selectedModule = null;
+            return true;
+        }
+
+        for (Map.Entry<String, Rect> entry : moduleRects.entrySet()) {
+            if (!contains(entry.getValue(), mouseX, mouseY)) continue;
+
+            if (button == 1) {
+                selectedModule = entry.getKey();
+                return true;
+            }
+            if (button == 0) {
+                enabled.put(entry.getKey(), !enabled.getOrDefault(entry.getKey(), false));
+                saveSettings();
+                return true;
+            }
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == 256 || keyCode == 344) {
+            onClose();
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public void onClose() {
+        saveSettings();
+        super.onClose();
+    }
+
+    private void loadSettings() {
+        Path file = settingsPath();
+        if (!Files.exists(file)) return;
+        Properties properties = new Properties();
+        try (var reader = Files.newBufferedReader(file)) {
+            properties.load(reader);
+            for (String module : enabled.keySet()) {
+                enabled.put(module, Boolean.parseBoolean(properties.getProperty(module, "false")));
+            }
+        } catch (IOException exception) {
+            // Keep defaults if the settings file cannot be read.
+        }
+    }
+
+    private void saveSettings() {
+        Path file = settingsPath();
+        Properties properties = new Properties();
+        enabled.forEach((name, value) -> properties.setProperty(name, Boolean.toString(value)));
+        try {
+            Files.createDirectories(file.getParent());
+            try (var writer = Files.newBufferedWriter(file)) {
+                properties.store(writer, "Fizzy Client module settings");
+            }
+        } catch (IOException exception) {
+            // The GUI remains usable even if settings cannot be saved.
+        }
+    }
+
+    private static Path settingsPath() {
+        return Path.of("config", "fizzy-client.properties");
+    }
+
+    private static boolean contains(Rect rect, double x, double y) {
+        return x >= rect.x() && x <= rect.x() + rect.width()
+            && y >= rect.y() && y <= rect.y() + rect.height();
+    }
+
+    private static void centered(GuiGraphics g, String text, int x, int y, int w, int h, int color) {
+        g.drawString(net.minecraft.client.Minecraft.getInstance().font, text,
+            x + (w - net.minecraft.client.Minecraft.getInstance().font.width(text)) / 2,
+            y + (h - 8) / 2, color, false);
+    }
+
+    private static void roundRect(GuiGraphics g, int x, int y, int w, int h, int radius, int color) {
+        int r = Math.min(radius, Math.min(w / 2, h / 2));
+        for (int row = 0; row < h; row++) {
+            int inset = 0;
+            if (row < r) {
+                double dy = r - row - 0.5;
+                inset = r - (int) Math.floor(Math.sqrt(Math.max(0, r * r - dy * dy)));
+            } else if (row >= h - r) {
+                double dy = row - (h - r) + 0.5;
+                inset = r - (int) Math.floor(Math.sqrt(Math.max(0, r * r - dy * dy)));
+            }
+            g.fill(x + inset, y + row, x + w - inset, y + row + 1, color);
+        }
+    }
+
+    private record Category(String name, String icon, List<String> modules) {}
+    private record Rect(int x, int y, int width, int height) {}
+}
