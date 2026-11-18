@@ -46,13 +46,20 @@ Aoba 1.21.6 uses Yarn mappings and Loom 1.10. The existing Fizzy 1.21.11 scaffol
 
 The uploaded archive's Gradle wrapper could not run in this environment because it attempted to download Gradle 8.12.1 from `services.gradle.org`, and outbound DNS/network access is unavailable here. The GitHub Actions build will be needed for an online compile check after source files are imported.
 
+## Port workspace changes made
+
+- [x] Created isolated `fizzy-aoba-port` branch from the independent Fizzy scaffold.
+- [x] Replaced the scaffold's MIT license file with Aoba's GPL-3.0 license text.
+- [x] Updated Fabric metadata to declare `GPL-3.0-or-later` and preserve Aoba contributor attribution.
+- [x] Rewrote the README to identify Aoba as upstream and state that this is not an installable release.
+
 ## Current status
 
 - [x] Source archive received and ZIP integrity checked
 - [x] Project configuration, license, metadata, and mixin declarations inspected
 - [x] Initial source-level network, process-launch, and credential-storage review
 - [x] Isolated migration branch created
-- [ ] Aoba source transplanted and rebranded
+- [ ] Aoba Java source transplanted and rebranded (not yet imported; this branch still contains the original Fizzy scaffold)
 - [ ] Minecraft 1.21.11 API port completed
 - [ ] Build and runtime smoke tests passed
 - [ ] Final security/dependency review completed
