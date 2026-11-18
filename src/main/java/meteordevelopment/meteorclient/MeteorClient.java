@@ -12,6 +12,7 @@ import meteordevelopment.meteorclient.events.meteor.KeyEvent;
 import meteordevelopment.meteorclient.events.meteor.MouseClickEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.gui.GuiThemes;
+import meteordevelopment.meteorclient.gui.screens.FizzyStandaloneScreen;
 import meteordevelopment.meteorclient.gui.WidgetScreen;
 import meteordevelopment.meteorclient.gui.tabs.Tabs;
 import meteordevelopment.meteorclient.systems.Systems;
@@ -169,8 +170,8 @@ public class MeteorClient implements ClientModInitializer {
     }
 
     private void toggleGui() {
-        if (Utils.canCloseGui()) mc.currentScreen.close();
-        else if (Utils.canOpenGui()) Tabs.get().getFirst().openScreen(GuiThemes.get());
+        if (mc.currentScreen instanceof FizzyStandaloneScreen) mc.setScreen(null);
+        else if (mc.currentScreen == null && mc.getOverlay() == null) mc.setScreen(new FizzyStandaloneScreen());
     }
 
     // Hide HUD
