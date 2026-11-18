@@ -120,7 +120,7 @@ public final class FizzyStandaloneScreen extends Screen {
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        ctx.fill(0, 0, width, height, BG);
+        // No full-screen backdrop: keep the Minecraft world visible behind the GUI.
         drawTextWithShadow(ctx, "FIZZY", 12, 10, accent());
         drawTextWithShadow(ctx, "CLIENT  /  CLICK GUI", 53, 12, MUTED);
 
