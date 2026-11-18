@@ -1,13 +1,12 @@
 /*
- * This file is part of the Meteor Client distribution (https://github.com/MeteorDevelopment/meteor-client).
- * Copyright (c) Meteor Development.
+ * Fizzy Client Click GUI.
+ * Keeps Meteor's existing module and setting registry.
  */
-
 package meteordevelopment.meteorclient.gui.screens;
 
-import meteordevelopment.meteorclient.gui.GuiTheme;
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
 import meteordevelopment.meteorclient.gui.widgets.WWidget;
+import meteordevelopment.meteorclient.settings.*;
 import meteordevelopment.meteorclient.systems.modules.Category;
 import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.systems.modules.Modules;
@@ -16,262 +15,306 @@ import net.minecraft.client.gui.Click;
 import net.minecraft.client.input.CharInput;
 import net.minecraft.client.input.KeyInput;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.HashMap;
-import java.util.Map;
-
+import java.util.*;
 import static meteordevelopment.meteorclient.MeteorClient.mc;
 import static meteordevelopment.meteorclient.utils.Utils.getWindowHeight;
 import static meteordevelopment.meteorclient.utils.Utils.getWindowWidth;
 import static org.lwjgl.glfw.GLFW.*;
 
 final class FizzyClickGui extends WWidget {
-    private static final Color PANEL = new Color(18, 18, 22, 250);
-    private static final Color SIDEBAR = new Color(15, 15, 19, 255);
-    private static final Color CARD = new Color(25, 25, 31, 255);
-    private static final Color CARD_HOVER = new Color(34, 32, 42, 255);
-    private static final Color PURPLE = new Color(151, 117, 255, 255);
-    private static final Color TEXT = new Color(235, 233, 242, 255);
-    private static final Color MUTED = new Color(145, 143, 155, 255);
-    private static final Color OFF = new Color(65, 64, 73, 255);
+    // Layout constants are in GUI-scaled units.
+    private static final double PANEL_W = 110, PANEL_H = 202, GAP = 8;
+    private static final double HEADER_H = 22, ROW_H = 18, ROW_GAP = 3, PAD = 5;
+    private static final Color PANEL = new Color(18, 14, 26, 225);
+    private static final Color BORDER = new Color(42, 34, 54, 185);
+    private static final Color ROW = new Color(27, 22, 36, 235);
+    private static final Color ROW_HOVER = new Color(43, 33, 53, 245);
+    private static final Color ACCENT = new Color(204, 102, 224, 255);
+    private static final Color TEXT = new Color(239, 231, 244, 245);
+    private static final Color MUTED = new Color(142, 135, 156, 255);
+    private static final Color RED = new Color(255, 77, 77, 255);
+    private static final Color GREEN = new Color(77, 255, 136, 255);
+    private static final Color SETTING_BG = new Color(15, 12, 21, 245);
 
     private final List<Category> categories = new ArrayList<>();
-    private Category selected;
-    private String search = "";
-    private boolean searchFocused;
-    private double scroll;
-    private double targetScroll;
-    private double openProgress;
-    private double selectedCategoryY = -1;
-    private final Map<Module, Double> toggleProgress = new HashMap<>();
-    private final Map<Category, Double> categoryHover = new HashMap<>();
-
-    private static double animate(double current, double target, double speed, double delta) {
-        double factor = 1 - Math.exp(-speed * Math.min(delta, 0.05));
-        return current + (target - current) * factor;
-    }
+    private final Map<Module, Boolean> expanded = new HashMap<>();
+    private final Map<Module, Double> expansion = new HashMap<>();
+    private final Map<Category, Double> scroll = new HashMap<>();
+    private final Map<Module, Double> enabledAnim = new HashMap<>();
+    private final Map<Module, Double> hoverAnim = new HashMap<>();
+    private Module sliderDragging;
+    private Setting<?> draggingSetting;
 
     FizzyClickGui() {
         for (Category category : Modules.loopCategories()) categories.add(category);
-        if (!categories.isEmpty()) selected = categories.get(0);
     }
 
-    @Override
-    protected void onCalculateSize() {
-        width = getWindowWidth();
-        height = getWindowHeight();
+    @Override protected void onCalculateSize() { width = getWindowWidth(); height = getWindowHeight(); }
+    @Override protected void onCalculateWidgetPositions() { x = 0; y = 0; width = getWindowWidth(); height = getWindowHeight(); }
+
+    private double s(double n) { return theme.scale(n); }
+    private double panelY() { return Math.max(s(12), (height - s(PANEL_H)) / 2); }
+    private double totalWidth() { return categories.size() * s(PANEL_W) + Math.max(0, categories.size() - 1) * s(GAP); }
+    private double startX() { return (width - totalWidth()) / 2; }
+    private double panelX(int i) { return startX() + i * s(PANEL_W + GAP); }
+    private static double ease(double current, double target, double speed, double dt) {
+        return current + (target - current) * (1 - Math.exp(-speed * Math.min(dt, 0.05)));
     }
 
-    @Override
-    protected void onCalculateWidgetPositions() {
-        x = 0;
-        y = 0;
-        width = getWindowWidth();
-        height = getWindowHeight();
-    }
-
-    private double panelWidth() {
-        return Math.min(theme.scale(940), width - theme.scale(40));
-    }
-
-    private double panelHeight() {
-        return Math.min(theme.scale(620), height - theme.scale(40));
-    }
-
-    private double panelX() { return x + (width - panelWidth()) / 2; }
-    private double panelY() { return y + (height - panelHeight()) / 2; }
-
-    private void roundedRect(GuiRenderer renderer, double x, double y, double w, double h, double radius, Color color) {
-        double diameter = radius * 2;
-        renderer.quad(x + radius, y, w - diameter, h, color);
-        renderer.quad(x, y + radius, radius, h - diameter, color);
-        renderer.quad(x + w - radius, y + radius, radius, h - diameter, color);
-        renderer.quad(x, y, diameter, diameter, GuiRenderer.CIRCLE, color);
-        renderer.quad(x + w - diameter, y, diameter, diameter, GuiRenderer.CIRCLE, color);
-        renderer.quad(x, y + h - diameter, diameter, diameter, GuiRenderer.CIRCLE, color);
-        renderer.quad(x + w - diameter, y + h - diameter, diameter, diameter, GuiRenderer.CIRCLE, color);
-    }
-
-    @Override
-    protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
-        openProgress = animate(openProgress, 1, 8.5, delta);
-        scroll = animate(scroll, targetScroll, 12, delta);
-        double px = panelX(), py = panelY() + (1 - openProgress) * theme.scale(34), pw = panelWidth(), ph = panelHeight();
-        double side = theme.scale(190);
-        double pad = theme.scale(26);
-        double rowH = theme.scale(76);
-        double contentX = px + side + pad;
-        double contentW = pw - side - pad * 2;
-        double listY = py + theme.scale(124);
-        double listBottom = py + ph - theme.scale(28);
-
-        roundedRect(renderer, px, py, pw, ph, theme.scale(10), PANEL);
-        roundedRect(renderer, px + theme.scale(1), py + theme.scale(1), side, ph - theme.scale(2), theme.scale(9), SIDEBAR);
-        renderer.quad(px + side - 1, py + theme.scale(12), 1, ph - theme.scale(24), new Color(43, 42, 49, 255));
-
-        renderer.minecraftText("FIZZY CLIENT", px + theme.scale(18), py + theme.scale(22), TEXT);
-        renderer.minecraftText("MODULES", px + theme.scale(18), py + theme.scale(46), MUTED);
-
-        double categoryY = py + theme.scale(92);
-        double selectedTargetY = categoryY;
-        for (Category category : categories) {
-            if (category.equals(selected)) selectedTargetY = categoryY;
-            boolean active = category.equals(selected);
-            double bx = px + theme.scale(9);
-            double bw = side - theme.scale(18);
-            double bh = theme.scale(30);
-            boolean hover = mouseX >= bx && mouseX <= bx + bw && mouseY >= categoryY && mouseY <= categoryY + bh;
-            double hoverAmount = categoryHover.compute(category, (key, value) -> animate(value == null ? 0 : value, hover ? 1 : 0, 14, delta));
-            if (active || hoverAmount > 0.01) roundedRect(renderer, bx, categoryY, bw, bh, theme.scale(5), active ? new Color(43, 34, 64, 255) : new Color(19 + (int)(10 * hoverAmount), 21 + (int)(10 * hoverAmount), 42 + (int)(18 * hoverAmount), 255));
-            if (active) renderer.quad(bx, categoryY, theme.scale(3), bh, PURPLE);
-            renderer.minecraftText(category.name, bx + theme.scale(12), categoryY + theme.scale(8), active ? TEXT : MUTED);
-            categoryY += theme.scale(38);
-        }
-
-        selectedCategoryY = animate(selectedCategoryY < 0 ? selectedTargetY : selectedCategoryY, selectedTargetY, 15, delta);
-        renderer.quad(px + theme.scale(9), selectedCategoryY, theme.scale(3), theme.scale(30), PURPLE);
-
-        String heading = selected == null ? "Modules" : selected.name + " Modules";
-        renderer.minecraftText(heading, contentX, py + theme.scale(23), TEXT);
-
-        int total = selected == null ? 0 : Modules.get().getGroup(selected).size();
-        int enabled = 0;
-        if (selected != null) for (Module module : Modules.get().getGroup(selected)) if (module.isActive()) enabled++;
-        renderer.minecraftText(enabled + " enabled  •  " + total + " modules", contentX, py + theme.scale(50), MUTED);
-
-        double searchY = py + theme.scale(21);
-        double searchW = theme.scale(240);
-        double searchX = px + pw - searchW - theme.scale(18);
-        roundedRect(renderer, searchX, searchY, searchW, theme.scale(34), theme.scale(5), new Color(25, 25, 31, 255));
-        renderer.minecraftText((search.isEmpty() ? "⌕  Search modules" : "⌕  " + search), searchX + theme.scale(12), searchY + theme.scale(11), search.isEmpty() ? MUTED : TEXT);
-        if (searchFocused) renderer.quad(searchX, searchY + theme.scale(33), searchW, theme.scale(1), PURPLE);
-
-        renderer.minecraftText("AVAILABLE MODULES", contentX, py + theme.scale(92), MUTED);
-
-        List<Module> modules = selected == null ? List.of() : Modules.get().getGroup(selected);
-        double cardY = listY - scroll;
-        int visibleIndex = 0;
-        renderer.scissorStart(contentX, listY, contentW, listBottom - listY);
-        for (Module module : modules) {
-            if (!search.isEmpty() && !(module.title.toLowerCase(Locale.ROOT).contains(search.toLowerCase(Locale.ROOT))
-                || module.description.toLowerCase(Locale.ROOT).contains(search.toLowerCase(Locale.ROOT)))) continue;
-
-            double entrance = Math.min(1, Math.max(0, (openProgress - visibleIndex * 0.035) / 0.72));
-            double easedEntrance = 1 - Math.pow(1 - entrance, 3);
-            double drawY = cardY + (1 - easedEntrance) * theme.scale(15);
-            if (cardY + rowH >= listY && cardY <= listBottom) {
-                boolean hover = mouseX >= contentX && mouseX <= contentX + contentW && mouseY >= cardY && mouseY <= cardY + rowH - theme.scale(5);
-                double hoverAmount = hover ? 1 : 0;
-                double toggleAmount = toggleProgress.compute(module, (key, value) -> animate(value == null ? (module.isActive() ? 1 : 0) : value, module.isActive() ? 1 : 0, 16, delta));
-                roundedRect(renderer, contentX, drawY, contentW, rowH - theme.scale(7), theme.scale(5), hoverAmount > 0.02 ? new Color(19 + (int)(10 * hoverAmount), 21 + (int)(10 * hoverAmount), 42 + (int)(18 * hoverAmount), 255) : CARD);
-
-                renderer.minecraftText(module.title, contentX + theme.scale(13), cardY + theme.scale(13), TEXT);
-                String description = module.description == null ? "" : module.description;
-                if (description.length() > 58) description = description.substring(0, 55) + "...";
-                renderer.minecraftText(description, contentX + theme.scale(13), cardY + theme.scale(38), MUTED);
-
-                double arrowX = contentX + contentW - theme.scale(78);
-                renderer.minecraftText("›", arrowX, cardY + theme.scale(23), MUTED);
-
-                double toggleX = contentX + contentW - theme.scale(49);
-                double toggleY = cardY + theme.scale(25);
-                roundedRect(renderer, toggleX, toggleY, theme.scale(29), theme.scale(15), theme.scale(7), module.isActive() ? PURPLE : OFF);
-                double knobX = toggleX + theme.scale(2 + 16 * toggleAmount);
-                roundedRect(renderer, knobX, toggleY + theme.scale(3), theme.scale(9), theme.scale(9), theme.scale(4), TEXT);
+    private void rounded(GuiRenderer r, double x, double y, double w, double h, double radius, Color color) {
+        // Scanline rounded rectangle: uses only the renderer's basic quads.
+        int lines = Math.max(2, (int)Math.ceil(h));
+        for (int i = 0; i < lines; i++) {
+            double yy = y + h * i / lines;
+            double hh = h / lines + 0.6;
+            double inset = 0;
+            double cy = yy + hh / 2 - y;
+            if (cy < radius) inset = radius - Math.sqrt(Math.max(0, radius * radius - (radius - cy) * (radius - cy)));
+            else if (cy > h - radius) {
+                double d = cy - (h - radius);
+                inset = radius - Math.sqrt(Math.max(0, radius * radius - d * d));
             }
-            cardY += rowH;
-            visibleIndex++;
+            r.quad(x + inset, yy, Math.max(0, w - inset * 2), hh, color);
         }
+    }
 
-        renderer.scissorEnd();
-        if (modules.isEmpty()) renderer.minecraftText("No modules in this category.", contentX, listY, MUTED);
-        else if (cardY <= listY) renderer.minecraftText("No modules match your search.", contentX, listY, MUTED);
+    private List<Module> modules(Category c) { return Modules.get().getGroup(c); }
+    private double settingsHeight(Module m) {
+        if (!expanded.getOrDefault(m, false)) return 0;
+        double h = s(5);
+        for (SettingGroup group : m.settings) {
+            if (!group.sectionExpanded) continue;
+            for (Setting<?> setting : group) if (setting.isVisible()) h += settingHeight(setting);
+        }
+        return h + s(3);
+    }
+    private double settingHeight(Setting<?> setting) {
+        if (setting instanceof BoolSetting) return s(11);
+        if (setting instanceof EnumSetting<?>) return s(23);
+        if (setting instanceof IntSetting || setting instanceof DoubleSetting) return s(20);
+        return s(12);
+    }
+    private double contentHeight(Category c) {
+        double h = s(HEADER_H + 5);
+        for (Module m : modules(c)) h += s(ROW_H + ROW_GAP) + settingsHeight(m);
+        return h;
+    }
+
+    @Override
+    protected void onRender(GuiRenderer r, double mx, double my, double delta) {
+        double px0 = startX(), py = panelY(), pw = s(PANEL_W), ph = Math.min(s(PANEL_H), height - s(24));
+        // Gentle dim, leaving the world visible.
+        r.quad(0, 0, width, height, new Color(0, 0, 0, 82));
+        for (int ci = 0; ci < categories.size(); ci++) {
+            Category category = categories.get(ci);
+            double px = panelX(ci);
+            double entrance = Math.min(1, Math.max(0, 1 - Math.pow(1 - Math.min(1, (delta * 0 + 1)), 3)));
+            rounded(r, px + s(1), py + s(2), pw, ph, s(5), new Color(0, 0, 0, 75));
+            rounded(r, px, py, pw, ph, s(5), PANEL);
+            rounded(r, px, py, pw, ph, s(5), BORDER);
+            // Inner panel fill keeps the border subtle.
+            rounded(r, px + s(0.7), py + s(0.7), pw - s(1.4), ph - s(1.4), s(4.5), PANEL);
+
+            String icon = switch (category.name.toLowerCase(Locale.ROOT)) {
+                case "combat" -> "⚔";
+                case "movement" -> "⌁";
+                case "render" -> "◉";
+                case "player" -> "♟";
+                default -> "⚙";
+            };
+            String heading = icon + " " + category.name;
+            double titleW = theme.textWidth(heading, false);
+            r.text(heading, px + (pw - titleW) / 2, py + s(7), TEXT, false);
+            r.quad(px + s(4), py + s(HEADER_H), pw - s(8), s(0.7), BORDER);
+
+            double top = py + s(HEADER_H + 5);
+            double bottom = py + ph - s(5);
+            double offset = scroll.getOrDefault(category, 0.0);
+            r.scissorStart(px + s(2), top, pw - s(4), bottom - top);
+            double cy = top - offset;
+            for (Module module : modules(category)) {
+                double rowY = cy;
+                boolean hover = mx >= px + s(PAD) && mx <= px + pw - s(PAD) && my >= rowY && my <= rowY + s(ROW_H);
+                double ha = hoverAnim.compute(module, (k,v) -> ease(v == null ? 0 : v, hover ? 1 : 0, 17, delta));
+                double ea = enabledAnim.compute(module, (k,v) -> ease(v == null ? (module.isActive() ? 1 : 0) : v, module.isActive() ? 1 : 0, 15, delta));
+                double open = expansion.compute(module, (k,v) -> ease(v == null ? (expanded.getOrDefault(module, false) ? 1 : 0) : v, expanded.getOrDefault(module, false) ? 1 : 0, 18, delta));
+                Color rowColor = mix(ROW, ROW_HOVER, ha);
+                rounded(r, px + s(PAD), rowY, pw - s(PAD * 2), s(ROW_H), s(3), rowColor);
+                if (ea > 0.01) rounded(r, px + s(PAD), rowY, pw - s(PAD * 2), s(ROW_H), s(3), new Color(ACCENT.r, ACCENT.g, ACCENT.b, (int)(22 * ea)));
+                Color label = mix(MUTED, ACCENT, ea);
+                double tw = theme.textWidth(module.title, false);
+                r.text(module.title, px + (pw - tw) / 2, rowY + s(5), label, false);
+                // Settings state dot: green when open, red when closed.
+                boolean isOpen = expanded.getOrDefault(module, false);
+                r.quad(px + pw - s(8), rowY + s(8), s(2.5), s(2.5), isOpen ? GREEN : RED);
+                cy += s(ROW_H + ROW_GAP);
+                double fullSettings = settingsHeight(module);
+                if (fullSettings > 0 || open > 0.015) {
+                    double drawH = fullSettings * open;
+                    rounded(r, px + s(PAD), cy, pw - s(PAD * 2), drawH, s(3), SETTING_BG);
+                    double sy = cy + s(3);
+                    for (SettingGroup group : module.settings) {
+                        if (!group.sectionExpanded) continue;
+                        for (Setting<?> setting : group) {
+                            if (!setting.isVisible()) continue;
+                            drawSetting(r, setting, px + s(PAD + 4), sy, pw - s(PAD * 2 + 8), mx, my);
+                            sy += settingHeight(setting);
+                        }
+                    }
+                    cy += drawH;
+                }
+            }
+            r.scissorEnd();
+        }
+        drawThemesTab(r);
+    }
+
+    private Color mix(Color a, Color b, double t) {
+        t = Math.max(0, Math.min(1, t));
+        return new Color((int)(a.r + (b.r-a.r)*t), (int)(a.g + (b.g-a.g)*t), (int)(a.b + (b.b-a.b)*t), (int)(a.a + (b.a-a.a)*t));
+    }
+
+    private void drawSetting(GuiRenderer r, Setting<?> setting, double x, double y, double w, double mx, double my) {
+        if (setting instanceof BoolSetting bool) {
+            r.text((bool.get() ? "✓" : "✗") + "  " + setting.title, x, y + s(2), bool.get() ? GREEN : RED, false);
+        } else if (setting instanceof IntSetting integer) {
+            drawSlider(r, setting.title, String.valueOf(integer.get()), x, y, w,
+                integer.sliderMin, integer.sliderMax, integer.get());
+        } else if (setting instanceof DoubleSetting number) {
+            drawSlider(r, setting.title, String.format(Locale.ROOT, "%." + number.decimalPlaces + "f", number.get()), x, y, w,
+                number.sliderMin, number.sliderMax, number.get());
+        } else if (setting instanceof EnumSetting<?> mode) {
+            r.text(setting.title + ":", x, y, MUTED, false);
+            r.text(String.join("  ", mode.getSuggestions()), x, y + s(10), ACCENT, false);
+        } else {
+            r.text(setting.title + ": " + String.valueOf(setting.get()), x, y + s(2), MUTED, false);
+        }
+    }
+
+    private void drawSlider(GuiRenderer r, String name, String value, double x, double y, double w, double min, double max, double current) {
+        r.text(name, x, y, MUTED, false);
+        double vw = theme.textWidth(value, false);
+        r.text(value, x + w - vw, y, TEXT, false);
+        double trackY = y + s(11), trackW = w;
+        rounded(r, x, trackY, trackW, s(2.5), s(1.2), new Color(42, 36, 51, 255));
+        double ratio = max <= min ? 0 : Math.max(0, Math.min(1, (current-min)/(max-min)));
+        rounded(r, x, trackY, trackW * ratio, s(2.5), s(1.2), ACCENT);
+        r.quad(x + trackW * ratio - s(1.5), trackY - s(1), s(4), s(4), TEXT);
+    }
+
+    private void drawThemesTab(GuiRenderer r) {
+        double w = s(62), h = s(15), x = width - w - s(5), y = height - h - s(5);
+        rounded(r, x, y, w, h, s(4), new Color(18, 14, 26, 235));
+        r.quad(x + s(6), y + s(6), s(3), s(3), ACCENT);
+        r.text("Themes", x + s(13), y + s(4), TEXT, false);
     }
 
     @Override
     public boolean onMouseClicked(Click click, boolean doubled) {
-        if (click.button() != GLFW_MOUSE_BUTTON_LEFT && click.button() != GLFW_MOUSE_BUTTON_RIGHT) return false;
-        boolean rightClick = click.button() == GLFW_MOUSE_BUTTON_RIGHT;
         double mx = click.x(), my = click.y();
-        double px = panelX(), py = panelY(), pw = panelWidth(), ph = panelHeight();
-        double side = theme.scale(190);
-
-        if (mx < px || mx > px + pw || my < py || my > py + ph) return false;
-
-        double categoryY = py + theme.scale(92);
-        for (Category category : categories) {
-            double bx = px + theme.scale(9), bw = side - theme.scale(18), bh = theme.scale(30);
-            if (!rightClick && mx >= bx && mx <= bx + bw && my >= categoryY && my <= categoryY + bh) {
-                selected = category;
-                scroll = 0;
-                targetScroll = 0;
-                search = "";
-                searchFocused = false;
-                return true;
-            }
-            categoryY += theme.scale(38);
-        }
-
-        double searchW = theme.scale(240);
-        double searchX = px + pw - searchW - theme.scale(18);
-        double searchY = py + theme.scale(21);
-        searchFocused = !rightClick && mx >= searchX && mx <= searchX + searchW && my >= searchY && my <= searchY + theme.scale(30);
-
-        double contentX = px + side + theme.scale(26);
-        double contentW = pw - side - theme.scale(52);
-        double cardY = py + theme.scale(124) - scroll;
-        double rowH = theme.scale(76);
-        if (selected != null) {
-            for (Module module : Modules.get().getGroup(selected)) {
-                if (!search.isEmpty() && !(module.title.toLowerCase(Locale.ROOT).contains(search.toLowerCase(Locale.ROOT))
-                    || module.description.toLowerCase(Locale.ROOT).contains(search.toLowerCase(Locale.ROOT)))) continue;
-                if (mx >= contentX && mx <= contentX + contentW && my >= cardY && my <= cardY + rowH - theme.scale(7)) {
-                    if (rightClick) {
+        int button = click.button();
+        if (button != GLFW_MOUSE_BUTTON_LEFT && button != GLFW_MOUSE_BUTTON_RIGHT && button != GLFW_MOUSE_BUTTON_MIDDLE) return false;
+        for (int ci = 0; ci < categories.size(); ci++) {
+            Category category = categories.get(ci);
+            double px = panelX(ci), py = panelY(), pw = s(PANEL_W), ph = s(PANEL_H);
+            if (mx < px || mx > px + pw || my < py || my > py + ph) continue;
+            double cy = py + s(HEADER_H + 5) - scroll.getOrDefault(category, 0.0);
+            for (Module module : modules(category)) {
+                if (mx >= px + s(PAD) && mx <= px + pw - s(PAD) && my >= cy && my <= cy + s(ROW_H)) {
+                    if (button == GLFW_MOUSE_BUTTON_LEFT) module.toggle();
+                    else if (button == GLFW_MOUSE_BUTTON_RIGHT && !module.settings.groups.isEmpty()) expanded.put(module, !expanded.getOrDefault(module, false));
+                    else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
                         mc.setScreen(theme.moduleScreen(module));
-                    } else {
-                        module.toggle();
                     }
                     return true;
                 }
-                cardY += rowH;
+                cy += s(ROW_H + ROW_GAP);
+                if (expanded.getOrDefault(module, false)) {
+                    for (SettingGroup group : module.settings) {
+                        if (!group.sectionExpanded) continue;
+                        for (Setting<?> setting : group) {
+                            if (!setting.isVisible()) continue;
+                            double sh = settingHeight(setting);
+                            if (my >= cy && my <= cy + sh && mx >= px + s(PAD) && mx <= px + pw - s(PAD)) {
+                                if (setting instanceof BoolSetting bool) bool.set(!bool.get());
+                                else if (setting instanceof EnumSetting<?> mode) cycleMode(mode);
+                                else if (setting instanceof IntSetting || setting instanceof DoubleSetting) {
+                                    sliderDragging = module;
+                                    draggingSetting = setting;
+                                    updateSlider(setting, mx, px + s(PAD + 4), pw - s(PAD * 2 + 8));
+                                }
+                                return true;
+                            }
+                            cy += sh;
+                        }
+                    }
+                    cy += s(3);
+                }
             }
+            return true;
         }
-        return true;
+        return false;
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private void cycleMode(EnumSetting mode) {
+        List values = mode.getSuggestions();
+        if (values.isEmpty()) return;
+        int index = values.indexOf(mode.get().toString());
+        mode.parse((String) values.get((index + 1) % values.size()));
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private void updateSlider(Setting setting, double mx, double x, double w) {
+        double ratio = Math.max(0, Math.min(1, (mx - x) / w));
+        if (setting instanceof IntSetting i) {
+            int value = (int)Math.round(i.sliderMin + (i.sliderMax - i.sliderMin) * ratio);
+            setting.set(value);
+        } else if (setting instanceof DoubleSetting d) {
+            double value = d.sliderMin + (d.sliderMax - d.sliderMin) * ratio;
+            double scale = Math.pow(10, d.decimalPlaces);
+            setting.set(Math.round(value * scale) / scale);
+        }
     }
 
     @Override
-    public boolean onMouseScrolled(double amount) {
-        targetScroll = Math.max(0, targetScroll - amount * theme.scale(54));
-        return true;
-    }
-
-    @Override
-    public boolean onCharTyped(CharInput input) {
-        if (!searchFocused) return false;
-        if (!Character.isISOControl(input.codepoint())) {
-            search += input.asString();
-            scroll = 0;
-            targetScroll = 0;
+    public boolean onMouseDragged(Click click, double deltaX, double deltaY) {
+        if (draggingSetting != null) {
+            for (int ci = 0; ci < categories.size(); ci++) {
+                double px = panelX(ci), pw = s(PANEL_W);
+                updateSlider(draggingSetting, click.x(), px + s(PAD + 4), pw - s(PAD * 2 + 8));
+            }
             return true;
         }
         return false;
     }
 
     @Override
-    public boolean onKeyPressed(KeyInput input) {
-        if (!searchFocused) return false;
-        if (input.key() == GLFW_KEY_BACKSPACE && !search.isEmpty()) {
-            search = search.substring(0, search.length() - 1);
-            scroll = 0;
-            targetScroll = 0;
-            return true;
+    public boolean onMouseReleased(Click click) {
+        draggingSetting = null;
+        sliderDragging = null;
+        return false;
+    }
+
+    @Override
+    public boolean onMouseScrolled(double amount) {
+        double mx = mc.mouse.getX() / mc.getWindow().getScaleFactor();
+        double my = mc.mouse.getY() / mc.getWindow().getScaleFactor();
+        for (int i = 0; i < categories.size(); i++) {
+            Category c = categories.get(i);
+            double px = panelX(i), py = panelY();
+            if (mx >= px && mx <= px + s(PANEL_W) && my >= py && my <= py + s(PANEL_H)) {
+                double max = Math.max(0, contentHeight(c) - s(PANEL_H - HEADER_H - 10));
+                scroll.put(c, Math.max(0, Math.min(max, scroll.getOrDefault(c, 0.0) - amount * s(18))));
+                return true;
+            }
         }
-        if (input.key() == GLFW_KEY_ESCAPE) {
-            searchFocused = false;
-            return true;
-        }
+        return false;
+    }
+
+    @Override public boolean onCharTyped(CharInput input) { return false; }
+    @Override public boolean onKeyPressed(KeyInput input) {
+        if (input.key() == GLFW_KEY_ESCAPE) { mc.setScreen(null); return true; }
         return false;
     }
 }
