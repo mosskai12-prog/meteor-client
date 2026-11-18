@@ -182,8 +182,8 @@ final class FizzyClickGui extends WWidget {
     }
 
     private void drawSearchBar(GuiRenderer r) {
-        double w = s(150), h = s(19);
-        double x = (width - w) / 2, y = s(10);
+        double w = s(180), h = s(19);
+        double x = (width - w) / 2, y = s(40);
         rounded(r, x, y, w, h, s(4), new Color(18, 14, 26, 245));
         rounded(r, x, y, w, s(1), s(0.5), searchFocused ? ACCENT : BORDER);
         String shown = searchQuery.isEmpty() ? "Search modules..." : searchQuery;
@@ -197,8 +197,8 @@ final class FizzyClickGui extends WWidget {
     }
 
     private boolean isSearchBar(double mx, double my) {
-        double w = s(150), h = s(19);
-        double x = (width - w) / 2, y = s(10);
+        double w = s(180), h = s(19);
+        double x = (width - w) / 2, y = s(40);
         return mx >= x && mx <= x + w && my >= y && my <= y + h;
     }
 
