@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 
 import net.aoba.api.IAddon;
+import net.aoba.command.GlobalChat;
 import net.aoba.gui.GuiManager;
 import net.aoba.gui.font.FontManager;
 import net.aoba.managers.CombatManager;
@@ -52,6 +53,8 @@ public class AobaClient {
 	public CombatManager combatManager;
 	public SettingManager settingManager;
 	public FriendsList friendsList;
+	// Compatibility field only; the Global Chat socket listener is never started.
+	public GlobalChat globalChat;
 	public EventManager eventManager;
 	public MacroManager macroManager;
 
