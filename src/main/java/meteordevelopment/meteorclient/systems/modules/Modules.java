@@ -555,6 +555,7 @@ public class Modules extends System<Modules> {
         add(new StashFinder());
         add(new SoundDetector());
         add(new WheatFarmer());
+        add(new AutoFarm());
         add(new Sell());
         add(new SpawnProofer());
         add(new Timer());
