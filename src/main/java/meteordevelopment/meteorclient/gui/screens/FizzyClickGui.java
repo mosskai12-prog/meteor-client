@@ -43,6 +43,8 @@ final class FizzyClickGui extends WWidget {
     private final Map<Module, Double> enabledAnim = new HashMap<>();
     private final Map<Module, Double> hoverAnim = new HashMap<>();
     private Module sliderDragging;
+    private String searchQuery = "";
+    private boolean searchFocused;
     private Setting<?> draggingSetting;
 
     FizzyClickGui() {
@@ -78,7 +80,16 @@ final class FizzyClickGui extends WWidget {
         }
     }
 
-    private List<Module> modules(Category c) { return Modules.get().getGroup(c); }
+    private List<Module> modules(Category c) {
+        List<Module> all = Modules.get().getGroup(c);
+        if (searchQuery.isBlank()) return all;
+        String query = searchQuery.toLowerCase(Locale.ROOT);
+        return all.stream().filter(module ->
+            module.title.toLowerCase(Locale.ROOT).contains(query)
+                || module.name.toLowerCase(Locale.ROOT).contains(query)
+                || module.description.toLowerCase(Locale.ROOT).contains(query)
+        ).toList();
+    }
     private double settingsHeight(Module m) {
         if (!expanded.getOrDefault(m, false)) return 0;
         double h = s(5);
@@ -105,6 +116,7 @@ final class FizzyClickGui extends WWidget {
         double px0 = startX(), py = panelY(), pw = s(PANEL_W), ph = Math.min(s(PANEL_H), height - s(24));
         // Gentle dim, leaving the world visible.
         r.quad(0, 0, width, height, new Color(0, 0, 0, 82));
+        drawSearchBar(r);
         for (int ci = 0; ci < categories.size(); ci++) {
             Category category = categories.get(ci);
             double px = panelX(ci);
@@ -169,6 +181,27 @@ final class FizzyClickGui extends WWidget {
         drawThemesTab(r);
     }
 
+    private void drawSearchBar(GuiRenderer r) {
+        double w = s(150), h = s(19);
+        double x = (width - w) / 2, y = s(10);
+        rounded(r, x, y, w, h, s(4), new Color(18, 14, 26, 245));
+        rounded(r, x, y, w, s(1), s(0.5), searchFocused ? ACCENT : BORDER);
+        String shown = searchQuery.isEmpty() ? "Search modules..." : searchQuery;
+        Color color = searchQuery.isEmpty() ? MUTED : TEXT;
+        r.text("⌕", x + s(6), y + s(5), ACCENT, false);
+        r.text(shown, x + s(19), y + s(5), color, false);
+        if (searchFocused && (System.currentTimeMillis() / 500) % 2 == 0) {
+            double textW = theme.textWidth(searchQuery, searchQuery.length(), false);
+            r.quad(x + s(19) + textW + s(1), y + s(5), s(1), s(8), ACCENT);
+        }
+    }
+
+    private boolean isSearchBar(double mx, double my) {
+        double w = s(150), h = s(19);
+        double x = (width - w) / 2, y = s(10);
+        return mx >= x && mx <= x + w && my >= y && my <= y + h;
+    }
+
     private Color mix(Color a, Color b, double t) {
         t = Math.max(0, Math.min(1, t));
         return new Color((int)(a.r + (b.r-a.r)*t), (int)(a.g + (b.g-a.g)*t), (int)(a.b + (b.b-a.b)*t), (int)(a.a + (b.a-a.a)*t));
@@ -214,6 +247,8 @@ final class FizzyClickGui extends WWidget {
         double mx = click.x(), my = click.y();
         int button = click.button();
         if (button != GLFW_MOUSE_BUTTON_LEFT && button != GLFW_MOUSE_BUTTON_RIGHT && button != GLFW_MOUSE_BUTTON_MIDDLE) return false;
+        if (isSearchBar(mx, my)) { searchFocused = true; return true; }
+        searchFocused = false;
         for (int ci = 0; ci < categories.size(); ci++) {
             Category category = categories.get(ci);
             double px = panelX(ci), py = panelY(), pw = s(PANEL_W), ph = s(PANEL_H);
@@ -313,9 +348,32 @@ final class FizzyClickGui extends WWidget {
         return false;
     }
 
-    @Override public boolean onCharTyped(CharInput input) { return false; }
-    @Override public boolean onKeyPressed(KeyInput input) {
-        if (input.key() == GLFW_KEY_ESCAPE) { mc.setScreen(null); return true; }
-        return false;
+    @Override
+    public boolean onCharTyped(CharInput input) {
+        if (!searchFocused) return false;
+        int codepoint = input.codepoint();
+        if (Character.isValidCodePoint(codepoint) && !Character.isISOControl(codepoint)) {
+            searchQuery += new String(Character.toChars(codepoint));
+            for (Category category : categories) scroll.put(category, 0.0);
+        }
+        return true;
+    }
+
+    @Override
+    public boolean onKeyPressed(KeyInput input) {
+        if (input.key() == GLFW_KEY_ESCAPE) {
+            if (searchFocused) { searchFocused = false; return true; }
+            mc.setScreen(null);
+            return true;
+        }
+        if (searchFocused && input.key() == GLFW_KEY_BACKSPACE) {
+            if (!searchQuery.isEmpty()) {
+                int end = searchQuery.offsetByCodePoints(searchQuery.length(), -1);
+                searchQuery = searchQuery.substring(0, end);
+                for (Category category : categories) scroll.put(category, 0.0);
+            }
+            return true;
+        }
+        return searchFocused;
     }
 }
