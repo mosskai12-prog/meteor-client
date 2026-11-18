@@ -13,9 +13,9 @@ import java.util.List;
 import java.util.Map;
 
 public final class ClickGuiScreen extends Screen {
-    private static final int PURPLE = 0xFF9B72F2, PURPLE_DARK = 0xFF7046C8;
-    private static final int PANEL = 0xF0181721, CARD = 0xFF292635, CARD_HOVER = 0xFF343044;
-    private static final int MUTED = 0xFF9B96AA, WHITE = 0xFFF4F1FA;
+    private static final int PURPLE = 0xFF36BFFF, PURPLE_DARK = 0xFF087DCE;
+    private static final int PANEL = 0xF00A1424, CARD = 0xFF12243A, CARD_HOVER = 0xFF193451;
+    private static final int MUTED = 0xFF8FAAC7, WHITE = 0xFFF4F9FF;
     private static final List<Category> CATEGORIES = List.of(
         new Category("COMBAT", "C", List.of()),
         new Category("MOVEMENT", "M", List.of("Toggle Sprint", "Speed Display")),
@@ -33,7 +33,7 @@ public final class ClickGuiScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        g.fill(0, 0, width, height, 0x9908060D);
+        g.fill(0, 0, width, height, 0x55030A18);
         int panelWidth = Math.min(1120, width - 36), panelHeight = Math.min(620, height - 36);
         panelWidth = Math.max(520, panelWidth); panelHeight = Math.max(340, panelHeight);
         float eased = 1.0f - (float)Math.pow(1.0f - openProgress, 3);
@@ -41,8 +41,8 @@ public final class ClickGuiScreen extends Screen {
         int dh = (int)(panelHeight * (0.94f + 0.06f * eased));
         int left = (width - dw) / 2, top = (height - dh) / 2;
         roundRect(g, left, top, dw, dh, 12, PANEL);
-        roundRect(g, left + 1, top + 1, dw - 2, 54, 11, 0xFF211E2B);
-        g.fill(left + 1, top + 48, left + dw - 1, top + 55, 0xFF211E2B);
+        roundRect(g, left + 1, top + 1, dw - 2, 54, 11, 0xFF0D1C30);
+        g.fill(left + 1, top + 48, left + dw - 1, top + 55, 0xFF0D1C30);
         roundRect(g, left + 18, top + 13, 28, 28, 8, PURPLE_DARK);
         centered(g, "F", left + 18, top + 13, 28, 28, WHITE);
         g.drawString(font, "FIZZY", left + 56, top + 13, WHITE, false);
@@ -50,7 +50,7 @@ public final class ClickGuiScreen extends Screen {
         g.drawString(font, "INDEPENDENT CLIENT  •  1.21.11", left + 142, top + 21, MUTED, false);
         String status = FizzyClient.MODULES.getStates().size() + " MODULES";
         int sw = font.width(status) + 18;
-        roundRect(g, left + dw - sw - 20, top + 17, sw, 22, 7, 0xFF302A3D);
+        roundRect(g, left + dw - sw - 20, top + 17, sw, 22, 7, 0xFF102E4C);
         g.drawString(font, status, left + dw - sw - 11, top + 24, PURPLE, false);
 
         int contentTop = top + 72, contentBottom = top + dh - 18;
@@ -60,8 +60,8 @@ public final class ClickGuiScreen extends Screen {
         for (int i = 0; i < CATEGORIES.size(); i++) {
             Category category = CATEGORIES.get(i);
             int x = innerLeft + i * (colWidth + gap);
-            roundRect(g, x, contentTop, colWidth, 34, 7, 0xFF24212F);
-            roundRect(g, x + 7, contentTop + 7, 20, 20, 5, 0xFF393047);
+            roundRect(g, x, contentTop, colWidth, 34, 7, 0xFF10243B);
+            roundRect(g, x + 7, contentTop + 7, 20, 20, 5, 0xFF123B63);
             centered(g, category.icon, x + 7, contentTop + 7, 20, 20, PURPLE);
             g.drawString(font, category.name, x + 33, contentTop + 12, WHITE, false);
             int moduleY = contentTop + 43;
@@ -73,13 +73,13 @@ public final class ClickGuiScreen extends Screen {
                 roundRect(g, x, moduleY, colWidth, cardHeight, 6, hovered ? CARD_HOVER : CARD);
                 g.drawString(font, module, x + 8, moduleY + 7, active ? WHITE : 0xFFD4D0DD, false);
                 int sx = x + colWidth - 29, sy = moduleY + 10;
-                roundRect(g, sx, sy, 21, 13, 7, active ? PURPLE_DARK : 0xFF4A4655);
+                roundRect(g, sx, sy, 21, 13, 7, active ? PURPLE_DARK : 0xFF3A526D);
                 roundRect(g, active ? sx + 11 : sx + 2, sy + 2, 9, 9, 5, 0xFFFFFFFF);
                 moduleY += cardHeight + 5;
             }
             if (category.modules.isEmpty()) g.drawString(font, "No modules", x + 8, moduleY + 8, 0xFF777184, false);
         }
-        g.fill(left + 18, contentBottom - 22, left + dw - 18, contentBottom - 21, 0xFF393443);
+        g.fill(left + 18, contentBottom - 22, left + dw - 18, contentBottom - 21, 0xFF1B456A);
         g.drawString(font, "LEFT CLICK  •  TOGGLE       RIGHT CLICK  •  SETTINGS       RIGHT SHIFT  •  CLOSE",
             left + 20, contentBottom - 13, MUTED, false);
         if (selectedModule != null) renderSettings(g, left, top, dw, dh);
@@ -87,8 +87,8 @@ public final class ClickGuiScreen extends Screen {
 
     private void renderSettings(GuiGraphics g, int left, int top, int panelWidth, int panelHeight) {
         int w = 340, h = 210, x = left + (panelWidth - w) / 2, y = top + (panelHeight - h) / 2;
-        roundRect(g, x - 5, y - 5, w + 10, h + 10, 12, 0xCC08070D);
-        roundRect(g, x, y, w, h, 10, 0xFF24212F);
+        roundRect(g, x - 5, y - 5, w + 10, h + 10, 12, 0xCC06111F);
+        roundRect(g, x, y, w, h, 10, 0xFF10243B);
         g.drawString(font, "MODULE SETTINGS", x + 16, y + 15, PURPLE, false);
         g.drawString(font, selectedModule, x + 16, y + 38, WHITE, false);
         String description = switch (selectedModule) {
@@ -129,7 +129,7 @@ public final class ClickGuiScreen extends Screen {
     }
 
     private void settingButton(GuiGraphics g, int x, int y, int w, String label) {
-        roundRect(g, x, y, w, 22, 6, 0xFF393047);
+        roundRect(g, x, y, w, 22, 6, 0xFF17466E);
         centered(g, label, x, y, w, 22, WHITE);
     }
     private void drawWrapped(GuiGraphics g, String text, int x, int y, int maxWidth, int color) {
