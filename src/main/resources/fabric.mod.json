@@ -3,22 +3,31 @@
   "id": "fizzy",
   "version": "${version}",
   "name": "Fizzy Client",
-  "description": "Fizzy Client, a Minecraft 1.21.11 Fabric client port based on Aoba Client.",
-  "authors": [
-    "Fizzy contributors",
-    "Aoba Client contributors"
-  ],
+  "description": "Fizzy Client for Minecraft 1.21.11, based on Aoba Client source.",
+  "authors": ["Fizzy contributors", "Aoba Client contributors"],
+  "contact": {
+    "sources": "https://github.com/mosskai12-prog/meteor-client",
+    "issues": "https://github.com/mosskai12-prog/meteor-client/issues",
+    "upstream": "https://github.com/Cocolots/Aoba-Client"
+  },
   "license": "GPL-3.0-or-later",
+  "icon": "assets/aoba/icon.png",
   "environment": "client",
   "entrypoints": {
-    "client": [
-      "com.fizzy.client.FizzyClient"
-    ]
+    "main": ["net.aoba.Aoba"]
   },
+  "mixins": [
+    "aoba.mixins.json",
+    "aoba-sodium.mixins.json"
+  ],
+  "accessWidener": "aoba.accesswidener",
   "depends": {
     "fabricloader": ">=0.18.1",
     "minecraft": "~1.21.11",
     "java": ">=21",
     "fabric-api": "*"
+  },
+  "suggests": {
+    "sodium": "*"
   }
 }
