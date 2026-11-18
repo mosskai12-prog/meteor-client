@@ -20,8 +20,8 @@ import static org.lwjgl.glfw.GLFW.*;
  * It deliberately uses the existing module registry for compatibility with current modules.
  */
 public final class FizzyStandaloneScreen extends Screen {
-    private static final int PANEL_W = 150, PANEL_H = 330, HEADER_H = 34;
-    private static final int GAP = 10, ROW_H = 25, PAD = 9;
+    private static final int PANEL_W = 118, PANEL_H = 280, HEADER_H = 29;
+    private static final int GAP = 7, ROW_H = 21, PAD = 7;
     private static final int BG = 0xD80B0911, PANEL = 0xF0161220, PANEL_EDGE = 0xFF382B48;
     private static final int ROW = 0xFF211A2B, ROW_HOVER = 0xFF30243D;
     private static final int PURPLE = 0xFFD58BFF, TEXT = 0xFFF4ECFA, MUTED = 0xFF9C91A7;
@@ -103,10 +103,10 @@ public final class FizzyStandaloneScreen extends Screen {
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         ctx.fill(0, 0, width, height, BG);
-        drawTextWithShadow(ctx, "FIZZY", 16, 13, accent());
-        drawTextWithShadow(ctx, "CLIENT  /  CLICK GUI", 62, 15, MUTED);
+        drawTextWithShadow(ctx, "FIZZY", 12, 10, accent());
+        drawTextWithShadow(ctx, "CLIENT  /  CLICK GUI", 53, 12, MUTED);
         drawTextWithShadow(ctx, "RIGHT SHIFT  •  DRAG HEADERS  •  LEFT CLICK TOGGLE  •  RIGHT CLICK SETTINGS",
-            16, height - 17, MUTED);
+            12, height - 14, MUTED);
 
         for (int i = 0; i < categories.size(); i++) drawPanel(ctx, i, mouseX, mouseY);
         drawThemes(ctx, mouseX, mouseY);
@@ -178,7 +178,7 @@ public final class FizzyStandaloneScreen extends Screen {
     }
 
     private void drawThemes(DrawContext ctx, int mx, int my) {
-        int w = 104, h = 25, x = width - w - 14, y = height - h - 28;
+        int w = 88, h = 22, x = width - w - 10, y = height - h - 22;
         ctx.fill(x, y, x + w, y + h, 0xF0161220);
         ctx.fill(x, y, x + w, y + 1, PANEL_EDGE);
         drawCentered(ctx, "THEMES  ▾", x, y + 8, w, accent());
@@ -189,7 +189,7 @@ public final class FizzyStandaloneScreen extends Screen {
             ctx.fill(x, yy, x + w, yy + 20, 0xF01B1524);
             drawTextWithShadow(ctx, (theme.equals(choice) ? "● " : "○ ") + choice, x + 8, yy + 6,
                 theme.equals(choice) ? accent() : TEXT);
-            yy += 22;
+            yy += 19;
         }
     }
 
@@ -197,14 +197,14 @@ public final class FizzyStandaloneScreen extends Screen {
     public boolean mouseClicked(Click click, boolean doubled) {
         double mx = click.x(), my = click.y();
         int button = click.button();
-        int tw = 104, tx = width - tw - 14, ty = height - 25 - 28;
-        if (button == GLFW_MOUSE_BUTTON_LEFT && mx >= tx && mx <= tx + tw && my >= ty && my <= ty + 25) {
+        int tw = 88, tx = width - tw - 10, ty = height - 22 - 22;
+        if (button == GLFW_MOUSE_BUTTON_LEFT && mx >= tx && mx <= tx + tw && my >= ty && my <= ty + 22) {
             themesOpen = !themesOpen;
             return true;
         }
         if (themesOpen && button == GLFW_MOUSE_BUTTON_LEFT) {
             String[] choices = {"Purple Haze", "Ocean", "Crimson", "Mono"};
-            int yy = ty - choices.length * 22 - 5;
+            int yy = ty - choices.length * 19 - 5;
             for (String choice : choices) {
                 if (mx >= tx && mx <= tx + tw && my >= yy && my <= yy + 20) {
                     theme = choice;
