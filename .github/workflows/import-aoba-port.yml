@@ -1,0 +1,215 @@
+name: Import and build Fizzy Aoba port
+
+on:
+  push:
+    branches: [fizzy-aoba-port]
+    paths:
+      - ".github/workflows/import-aoba-port.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Fizzy branch
+        uses: actions/checkout@v4
+        with:
+          ref: fizzy-aoba-port
+          fetch-depth: 0
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Fetch Aoba 1.21.6 source
+        run: |
+          git clone --depth 1 --branch 1.21.6 https://github.com/Cocolots/Aoba-Client.git /tmp/aoba
+          test -f /tmp/aoba/src/main/java/net/aoba/Aoba.java
+          test -f /tmp/aoba/LICENSE
+
+      - name: Import audited Aoba source and rebrand
+        run: |
+          rm -rf src/main/java src/main/resources
+          mkdir -p src/main/java src/main/resources
+          cp -a /tmp/aoba/src/main/java/. src/main/java/
+          cp -a /tmp/aoba/src/main/resources/. src/main/resources/
+          cat > src/main/resources/fabric.mod.json <<'JSON'
+          {
+            "schemaVersion": 1,
+            "id": "fizzy",
+            "version": "${version}",
+            "name": "Fizzy Client",
+            "description": "Fizzy Client for Minecraft 1.21.11, based on Aoba Client source.",
+            "authors": ["Fizzy contributors", "Aoba Client contributors"],
+            "contact": {
+              "sources": "https://github.com/mosskai12-prog/meteor-client",
+              "issues": "https://github.com/mosskai12-prog/meteor-client/issues",
+              "upstream": "https://github.com/Cocolots/Aoba-Client"
+            },
+            "license": "GPL-3.0-or-later",
+            "icon": "assets/aoba/icon.png",
+            "environment": "client",
+            "entrypoints": {
+              "main": ["net.aoba.Aoba"]
+            },
+            "mixins": [
+              "aoba.mixins.json",
+              "aoba-sodium.mixins.json"
+            ],
+            "accessWidener": "aoba.accesswidener",
+            "depends": {
+              "fabricloader": ">=0.18.1",
+              "minecraft": "~1.21.11",
+              "java": ">=21",
+              "fabric-api": "*"
+            },
+            "suggests": {
+              "sodium": "*"
+            }
+          }
+          JSON
+          cat > gradle.properties <<'PROPS'
+          org.gradle.jvmargs=-Xmx3G
+          org.gradle.parallel=true
+          org.gradle.caching=true
+
+          minecraft_version=1.21.11
+          yarn_mappings=1.21.11+build.6
+          loader_version=0.18.1
+          loom_version=1.14-SNAPSHOT
+
+          mod_version=0.2.0
+          maven_group=com.fizzy
+          archives_base_name=Fizzy
+
+          fabric_version=0.141.1+1.21.11
+          netty_version=4.1.117.Final
+          sodium_version=mc1.21.11-0.8.1-fabric
+          PROPS
+          cat > build.gradle <<'GRADLE'
+          plugins {
+              id 'net.fabricmc.fabric-loom-remap' version '1.14-SNAPSHOT'
+              id 'maven-publish'
+          }
+
+          version = project.mod_version
+          group = project.maven_group
+
+          base {
+              archivesName = 'fizzy-client'
+          }
+
+          repositories {
+              mavenCentral()
+              maven { url = 'https://api.modrinth.com/maven' }
+          }
+
+          configurations {
+              libImpl
+          }
+
+          dependencies {
+              minecraft "com.mojang:minecraft:${project.minecraft_version}"
+              mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+              modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+              modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+              modImplementation("maven.modrinth:sodium:${project.sodium_version}") {
+                  transitive = false
+              }
+
+              libImpl("io.netty:netty-handler-proxy:${project.netty_version}") {
+                  transitive = false
+              }
+              libImpl("io.netty:netty-codec-socks:${project.netty_version}") {
+                  transitive = false
+              }
+              configurations.libImpl.dependencies.each {
+                  implementation(it)
+              }
+          }
+
+          loom {
+              accessWidenerPath = file("src/main/resources/aoba.accesswidener")
+          }
+
+          processResources {
+              inputs.property "version", project.version
+              filesMatching("fabric.mod.json") {
+                  expand "version": project.version
+              }
+          }
+
+          tasks.withType(JavaCompile).configureEach {
+              options.release = 21
+              options.encoding = 'UTF-8'
+          }
+
+          java {
+              sourceCompatibility = JavaVersion.VERSION_21
+              targetCompatibility = JavaVersion.VERSION_21
+              withSourcesJar()
+          }
+
+          jar {
+              from("LICENSE") {
+                  rename { "${it}_fizzy-client" }
+              }
+              from {
+                  configurations.libImpl.collect { it.isDirectory() ? it : zipTree(it) }
+              }
+              duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+          }
+          GRADLE
+          sed -i 's/gradle-8\.12\.1-bin/gradle-8.14.3-bin/' gradle/wrapper/gradle-wrapper.properties
+          cat > UPSTREAM_NOTICE.md <<'NOTICE'
+          # Upstream source notice
+
+          Fizzy's current port branch incorporates source from [Aoba Client](https://github.com/Cocolots/Aoba-Client), specifically its Minecraft 1.21.6 source tree, ported toward Minecraft 1.21.11.
+
+          Aoba source is licensed under GNU GPL version 3 or later. The upstream license and applicable source copyright notices are retained. Fizzy-specific changes are distributed under the same license.
+
+          This is an in-progress port. The upstream source has not been represented as a completed or fully audited Minecraft 1.21.11 build.
+          NOTICE
+          git status --short
+
+      - name: Commit imported source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Import Aoba source into Fizzy 1.21.11 port [skip ci]"
+            git push origin HEAD:fizzy-aoba-port
+          fi
+
+      - name: Validate wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Build Fizzy
+        run: ./gradlew --no-daemon build
+
+      - name: Upload Fizzy JAR
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fizzy-Client-1.21.11
+          path: build/libs/*[!sources].jar
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fizzy-Build-Diagnostics
+          path: |
+            build/reports/
+            build/tmp/
+          if-no-files-found: ignore
+          retention-days: 7
