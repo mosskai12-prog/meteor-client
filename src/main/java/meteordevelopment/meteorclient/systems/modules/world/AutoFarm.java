@@ -108,7 +108,7 @@ public class AutoFarm extends Module {
         // Spread crop scanning across ticks instead of checking tens of thousands
         // of blocks in one frame. This prevents large, repeated client-thread spikes.
         if (scanIterator == null && scanCooldown-- <= 0) beginScan();
-        if (scanIterator != null) scanBlocks(512);
+        if (scanIterator != null) scanBlocks(2048);
 
         if (scanIterator != null) return;
         if (++ticks < actionDelay.get()) return;
@@ -154,7 +154,7 @@ public class AutoFarm extends Module {
         ).iterator();
         scanBest = null;
         scanBestDistance = Double.MAX_VALUE;
-        scanCooldown = 20;
+        scanCooldown = 5;
     }
 
     private void scanBlocks(int budget) {
