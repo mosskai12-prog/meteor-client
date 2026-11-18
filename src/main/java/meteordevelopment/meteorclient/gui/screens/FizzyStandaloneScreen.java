@@ -270,10 +270,10 @@ public final class FizzyStandaloneScreen extends Screen {
         double ratio = Math.max(0, Math.min(1, (mouseX - sliderX) / sliderW));
         if (sliderSetting instanceof IntSetting setting) {
             int value = (int) Math.round(setting.sliderMin + (setting.sliderMax - setting.sliderMin) * ratio);
-            sliderSetting.set(value);
+            sliderSetting.parse(Integer.toString(value));
         } else if (sliderSetting instanceof DoubleSetting setting) {
             double value = setting.sliderMin + (setting.sliderMax - setting.sliderMin) * ratio;
-            sliderSetting.set(value);
+            sliderSetting.parse(Double.toString(value));
         }
     }
 
