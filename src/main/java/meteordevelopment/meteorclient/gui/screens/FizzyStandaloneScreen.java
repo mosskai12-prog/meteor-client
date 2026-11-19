@@ -83,15 +83,9 @@ public final class FizzyStandaloneScreen extends Screen {
         return FabricLoader.getInstance().getConfigDir().resolve("fizzy-clickgui.properties").toFile();
     }
 
+    // Fizzy's click GUI uses square corners throughout.
     private void fillRounded(DrawContext ctx, int x1, int y1, int x2, int y2, int radius, int color) {
-        int r = Math.max(1, Math.min(radius, Math.min((x2 - x1) / 2, (y2 - y1) / 2)));
-        for (int row = 0; row < r; row++) {
-            int dy = r - row - 1;
-            int inset = r - (int) Math.sqrt(r * r - dy * dy);
-            ctx.fill(x1 + inset, y1 + row, x2 - inset, y1 + row + 1, color);
-            ctx.fill(x1 + inset, y2 - row - 1, x2 - inset, y2 - row, color);
-        }
-        ctx.fill(x1, y1 + r, x2, y2 - r, color);
+        ctx.fill(x1, y1, x2, y2, color);
     }
 
     private void fillVerticalGradient(DrawContext ctx, int x1, int y1, int x2, int y2, int top, int bottom) {
