@@ -152,7 +152,7 @@ public final class FizzyStandaloneScreen extends Screen {
         }
 
         text(ctx, "FIZZY  /  YOUR WORKSPACE", x + 16, y + h - 15, MUTED);
-        text(ctx, Modules.get().getAll().stream().filter(Module::isActive).count() + " modules active",
+        text(ctx, categories.stream().flatMap(category -> Modules.get().getGroup(category).stream()).filter(Module::isActive).count() + " modules active",
             x + w - 118, y + h - 15, MUTED);
         super.render(ctx, mouseX, mouseY, delta);
     }
