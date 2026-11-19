@@ -10,383 +10,401 @@ import net.minecraft.client.gui.Click;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.client.input.CharInput;
 import net.minecraft.text.Text;
+import net.fabricmc.loader.api.FabricLoader;
 
+import java.io.*;
 import java.util.*;
 import static org.lwjgl.glfw.GLFW.*;
 
 /**
- * Fizzy Client's modern three-column module workspace.
- * Uses Minecraft's native text and rendering APIs, with a responsive desktop-style layout.
+ * Fizzy's standalone click GUI. This is a real Minecraft Screen, not a Meteor WWidget.
+ * It deliberately uses the existing module registry for compatibility with current modules.
  */
 public final class FizzyStandaloneScreen extends Screen {
-    private static final int OUTER_W = 930, OUTER_H = 500;
-    private static final int SIDEBAR_W = 132, SETTINGS_W = 246;
-    private static final int TOP_H = 48, FOOT_H = 22;
-    private static final int BG = 0xFF17191D, PANEL = 0xFF202329, PANEL_2 = 0xFF282C33;
-    private static final int EDGE = 0xFF454A53, TEXT = 0xFFF0F1F3, MUTED = 0xFFA4AAB4;
-    private static final int ACCENT = 0xFFD6C86D, ACTIVE = 0xFF34382F;
-
+    private static final int PANEL_W = 260, PANEL_H = 360, HEADER_H = 29;
+    private static final int GAP = 7, ROW_H = 21, PAD = 7;
+    // Fully opaque surfaces keep the Minecraft world from showing through the GUI.
+    private static final int BG = 0xFF101113, PANEL = 0xFF25272B, PANEL_EDGE = 0xFFBFC3C8;
+    private static final int ROW = 0xFF34373B, ROW_HOVER = 0xFF555A60;
+    private static final int PURPLE = 0xFFE0E3E7, TEXT = 0xFFF5F5F5, MUTED = 0xFFB5B8BC;
+    private static final int GREEN = 0xFFE1E4E8;
     private final List<Category> categories = new ArrayList<>();
-    private final Map<Category, Integer> scroll = new HashMap<>();
     private final Map<Module, Boolean> expanded = new HashMap<>();
+    private final Map<Category, Integer> scroll = new HashMap<>();
+    private final Map<Category, int[]> positions = new HashMap<>();
+    private Category dragging;
     private int selectedCategory;
-    private Module selectedModule;
     private String searchQuery = "";
     private boolean searchFocused;
-    private boolean enabledOnly;
-    private String topTab = "Modules";
+    private double dragX, dragY;
+    private String theme = "Silver";
+    private boolean themesOpen;
     private Setting<?> sliderSetting;
     private double sliderX, sliderW;
 
     public FizzyStandaloneScreen() {
         super(Text.literal("Fizzy Client"));
         for (Category category : Modules.loopCategories()) categories.add(category);
-        if (!categories.isEmpty()) {
-            List<Module> first = Modules.get().getGroup(categories.get(0));
-            if (!first.isEmpty()) selectedModule = first.get(0);
+        loadLayout();
+    }
+
+    private void loadLayout() {
+        File file = configFile();
+        if (!file.isFile()) return;
+        Properties p = new Properties();
+        try (FileInputStream in = new FileInputStream(file)) {
+            p.load(in);
+            theme = p.getProperty("theme", theme);
+            for (int i = 0; i < categories.size(); i++) {
+                Category c = categories.get(i);
+                String x = p.getProperty(c.name + ".x");
+                String y = p.getProperty(c.name + ".y");
+                if (x != null && y != null) positions.put(c, new int[]{Integer.parseInt(x), Integer.parseInt(y)});
+            }
+        } catch (Exception ignored) {}
+    }
+
+    private void saveLayout() {
+        File file = configFile();
+        File parent = file.getParentFile();
+        if (parent != null) parent.mkdirs();
+        Properties p = new Properties();
+        p.setProperty("theme", theme);
+        positions.forEach((c, xy) -> {
+            p.setProperty(c.name + ".x", Integer.toString(xy[0]));
+            p.setProperty(c.name + ".y", Integer.toString(xy[1]));
+        });
+        try (FileOutputStream out = new FileOutputStream(file)) {
+            p.store(out, "Fizzy Client click GUI");
+        } catch (IOException ignored) {}
+    }
+
+    private File configFile() {
+        return FabricLoader.getInstance().getConfigDir().resolve("fizzy-clickgui.properties").toFile();
+    }
+
+    // Fizzy's click GUI uses square corners throughout.
+    private void fillRounded(DrawContext ctx, int x1, int y1, int x2, int y2, int radius, int color) {
+        ctx.fill(x1, y1, x2, y2, color);
+    }
+
+    private void fillVerticalGradient(DrawContext ctx, int x1, int y1, int x2, int y2, int top, int bottom) {
+        int height = Math.max(1, y2 - y1);
+        for (int y = 0; y < height; y++) {
+            float t = y / (float) Math.max(1, height - 1);
+            int a = lerpColor(top, bottom, t);
+            ctx.fill(x1, y1 + y, x2, y1 + y + 1, a);
         }
     }
 
-    private int panelX() { return (width - Math.min(OUTER_W, width - 24)) / 2; }
-    private int panelY() { return (height - Math.min(OUTER_H, height - 24)) / 2; }
-    private int panelW() { return Math.min(OUTER_W, width - 24); }
-    private int panelH() { return Math.min(OUTER_H, height - 24); }
-    private int sideX() { return panelX() + 8; }
-    private int sideY() { return panelY() + TOP_H + 8; }
-    private int sideH() { return panelH() - TOP_H - FOOT_H - 16; }
-    private int centerX() { return sideX() + SIDEBAR_W + 10; }
-    private int settingsX() { return panelX() + panelW() - SETTINGS_W - 8; }
-    private int centerW() { return settingsX() - centerX() - 10; }
-    private int bodyY() { return sideY(); }
-    private int bodyBottom() { return panelY() + panelH() - FOOT_H - 8; }
-
-    private void rounded(DrawContext ctx, int x1, int y1, int x2, int y2, int radius, int color) {
-        if (x2 <= x1 || y2 <= y1) return;
-        int r = Math.max(0, Math.min(radius, Math.min((x2 - x1) / 2, (y2 - y1) / 2)));
-        if (r == 0) { ctx.fill(x1, y1, x2, y2, color); return; }
-        ctx.fill(x1 + r, y1, x2 - r, y2, color);
-        for (int y = 0; y < r; y++) {
-            int inset = (int) Math.ceil(r - Math.sqrt(Math.max(0, r * r - (r - y - 0.5) * (r - y - 0.5))));
-            ctx.fill(x1 + inset, y1 + y, x2 - inset, y1 + y + 1, color);
-            ctx.fill(x1 + inset, y2 - y - 1, x2 - inset, y2 - y, color);
-        }
+    private int lerpColor(int a, int b, float t) {
+        int aa = (a >>> 24) & 255, ar = (a >>> 16) & 255, ag = (a >>> 8) & 255, ab = a & 255;
+        int ba = (b >>> 24) & 255, br = (b >>> 16) & 255, bg = (b >>> 8) & 255, bb = b & 255;
+        int alpha = Math.round(aa + (ba - aa) * t);
+        int red = Math.round(ar + (br - ar) * t);
+        int green = Math.round(ag + (bg - ag) * t);
+        int blue = Math.round(ab + (bb - ab) * t);
+        return alpha << 24 | red << 16 | green << 8 | blue;
     }
 
-    private void gradient(DrawContext ctx, int x1, int y1, int x2, int y2, int top, int bottom) {
-        int h = Math.max(1, y2 - y1);
-        for (int y = 0; y < h; y++) ctx.fill(x1, y1 + y, x2, y1 + y + 1, mix(top, bottom, y / (float) h));
+    private int panelX() { return (width - PANEL_W) / 2; }
+    private int panelY() { return Math.max(96, (height - PANEL_H) / 2 + 18); }
+    private int tabsWidth() { return categories.size() * 82; }
+    private int tabsX() { return (width - tabsWidth()) / 2; }
+    private int tabY() { return 65; }
+    private boolean overSearch(double mx, double my) {
+        int w = 240, x = (width - w) / 2;
+        return mx >= x && mx <= x + w && my >= 36 && my <= 60;
+    }
+    private List<Module> visibleModules(Category category) {
+        String query = searchQuery.trim().toLowerCase(Locale.ROOT);
+        List<Module> all = Modules.get().getGroup(category);
+        if (query.isEmpty()) return all;
+        return all.stream().filter(module ->
+            module.title.toLowerCase(Locale.ROOT).contains(query)
+                || module.name.toLowerCase(Locale.ROOT).contains(query)
+                || module.description.toLowerCase(Locale.ROOT).contains(query)
+        ).toList();
     }
 
-    private int mix(int a, int b, float t) {
-        int aa=(a>>>24)&255, ar=(a>>>16)&255, ag=(a>>>8)&255, ab=a&255;
-        int ba=(b>>>24)&255, br=(b>>>16)&255, bg=(b>>>8)&255, bb=b&255;
-        return (Math.round(aa+(ba-aa)*t)<<24) | (Math.round(ar+(br-ar)*t)<<16)
-            | (Math.round(ag+(bg-ag)*t)<<8) | Math.round(ab+(bb-ab)*t);
+    private int accent() {
+        return switch (theme) {
+            case "Steel" -> 0xFFB8BEC6;
+            case "Graphite" -> 0xFF8D9299;
+            case "Mono" -> 0xFFE7E9EC;
+            default -> PURPLE;
+        };
     }
 
-    private void text(DrawContext ctx, String value, int x, int y, int color) {
-        ctx.drawTextWithShadow(textRenderer, Text.literal(value), x, y, color);
+    // Prevent Minecraft's default screen background blur; this screen draws its own solid backdrop.
+    @Override
+    public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        // Intentionally empty: no blur and no translucent world background.
     }
-    private void centered(DrawContext ctx, String value, int x, int y, int w, int color) {
-        text(ctx, value, x + (w - textRenderer.getWidth(value)) / 2, y, color);
-    }
-    private String trim(String value, int maxWidth) {
-        while (!value.isEmpty() && textRenderer.getWidth(value) > maxWidth)
-            value = value.substring(0, value.length() - 1);
-        return value.isEmpty() ? value : value + "…";
-    }
-
-    private List<Module> visibleModules() {
-        if (categories.isEmpty()) return List.of();
-        String q = searchQuery.trim().toLowerCase(Locale.ROOT);
-        return Modules.get().getGroup(categories.get(selectedCategory)).stream()
-            .filter(m -> (!enabledOnly || m.isActive()))
-            .filter(m -> q.isEmpty() || m.title.toLowerCase(Locale.ROOT).contains(q)
-                || m.name.toLowerCase(Locale.ROOT).contains(q)
-                || m.description.toLowerCase(Locale.ROOT).contains(q))
-            .toList();
-    }
-
-    private void selectCategory(int index) {
-        if (index < 0 || index >= categories.size()) return;
-        selectedCategory = index;
-        List<Module> list = visibleModules();
-        selectedModule = list.isEmpty() ? null : list.get(0);
-    }
-
-    @Override public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {}
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        int x = panelX(), y = panelY(), w = panelW(), h = panelH();
-        rounded(ctx, x + 5, y + 7, x + w + 5, y + h + 7, 13, 0x77000000);
-        rounded(ctx, x, y, x + w, y + h, 13, EDGE);
-        rounded(ctx, x + 1, y + 1, x + w - 1, y + h - 1, 12, BG);
-        rounded(ctx, x + 1, y + 1, x + w - 1, y + TOP_H, 12, PANEL);
-        ctx.fill(x + 1, y + TOP_H, x + w - 1, y + TOP_H + 1, EDGE);
+        // No full-screen backdrop: keep the Minecraft world visible behind the GUI.
+        drawTextWithShadow(ctx, "FIZZY", 12, 10, accent());
+        drawTextWithShadow(ctx, "CLIENT  /  CLICK GUI", 53, 12, MUTED);
 
-        // Header / branding
-        rounded(ctx, x + 14, y + 13, x + 32, y + 31, 9, ACCENT);
-        rounded(ctx, x + 19, y + 18, x + 27, y + 26, 4, 0xFF25282D);
-        text(ctx, "FIZZY", x + 42, y + 12, TEXT);
-        text(ctx, "CLIENT WORKSPACE", x + 42, y + 25, MUTED);
-        String[] tabs = {"Modules", "HUD", "Appearance"};
-        int tabX = x + w - 235;
-        for (String tab : tabs) {
-            int tw = tab.equals("Appearance") ? 88 : 66;
-            boolean active = topTab.equals(tab);
-            if (active) rounded(ctx, tabX, y + 10, tabX + tw, y + 38, 7, ACTIVE);
-            centered(ctx, tab, tabX, y + 19, tw, active ? TEXT : MUTED);
-            if (active) rounded(ctx, tabX + 12, y + 37, tabX + tw - 12, y + 39, 1, ACCENT);
-            tabX += tw + 8;
+        int searchW = 240, searchX = (width - searchW) / 2;
+        fillRounded(ctx, searchX, 36, searchX + searchW, 60, 7, 0xFF25272B);
+        fillRounded(ctx, searchX, 36, searchX + searchW, 40, 7, searchFocused ? accent() : 0xFFC8CCD1);
+        String searchText = searchQuery.isEmpty() ? "Search modules..." : searchQuery;
+        drawTextWithShadow(ctx, searchText, searchX + 10, 44, searchQuery.isEmpty() ? MUTED : TEXT);
+        if (searchFocused && (System.currentTimeMillis() / 500) % 2 == 0) {
+            int cursorX = searchX + 10 + textRenderer.getWidth(searchQuery);
+            ctx.fill(cursorX + 1, 43, cursorX + 2, 55, accent());
         }
 
-        drawSidebar(ctx, mouseX, mouseY);
-        if (topTab.equals("Modules")) {
-            drawModuleDesk(ctx, mouseX, mouseY);
-            drawSettings(ctx);
-        } else if (topTab.equals("HUD")) {
-            drawSimplePage(ctx, "HUD", "Configure the on-screen module list and status overlays.");
-        } else {
-            drawSimplePage(ctx, "Appearance", "Customize the Fizzy Client interface.");
+        for (int i = 0; i < categories.size(); i++) {
+            int x = tabsX() + i * 82, y = tabY();
+            boolean active = i == selectedCategory;
+            fillRounded(ctx, x, y, x + 78, y + 22, 6, active ? 0xFF50545A : 0xFF25272B);
+            fillRounded(ctx, x, y, x + 78, y + 3, 3, active ? accent() : 0xFF9CA1A8);
+            drawCentered(ctx, categories.get(i).name.toUpperCase(Locale.ROOT), x, y + 7, 78, active ? accent() : MUTED);
         }
 
-        text(ctx, "FIZZY  /  YOUR WORKSPACE", x + 16, y + h - 15, MUTED);
-        text(ctx, categories.stream().flatMap(category -> Modules.get().getGroup(category).stream()).filter(Module::isActive).count() + " modules active",
-            x + w - 118, y + h - 15, MUTED);
+        if (!categories.isEmpty()) drawPanel(ctx, Math.max(0, Math.min(selectedCategory, categories.size() - 1)), mouseX, mouseY);
+        drawTextWithShadow(ctx, "RIGHT SHIFT  •  LEFT CLICK TOGGLE  •  RIGHT CLICK SETTINGS",
+            12, height - 14, MUTED);
+        drawThemes(ctx, mouseX, mouseY);
         super.render(ctx, mouseX, mouseY, delta);
     }
 
-    private void drawSidebar(DrawContext ctx, int mx, int my) {
-        int x = sideX(), y = sideY(), h = sideH();
-        rounded(ctx, x, y, x + SIDEBAR_W, y + h, 9, PANEL);
-        text(ctx, "WORKSPACE", x + 10, y + 11, 0xFFB8D8E8);
-        int cy = y + 31;
-        for (int i = 0; i < categories.size(); i++) {
-            Category c = categories.get(i);
-            boolean active = i == selectedCategory;
-            int rowY = cy + i * 29;
-            if (active) {
-                rounded(ctx, x + 5, rowY, x + SIDEBAR_W - 5, rowY + 25, 6, ACTIVE);
-                rounded(ctx, x + 5, rowY + 5, x + 7, rowY + 20, 1, ACCENT);
-            }
-            text(ctx, (active ? "✦ " : "· ") + c.name, x + 13, rowY + 8, active ? TEXT : MUTED);
-        }
-        rounded(ctx, x + 10, y + h - 37, x + 16, y + h - 31, 3, ACCENT);
-        text(ctx, "Enabled only", x + 23, y + h - 37, enabledOnly ? TEXT : MUTED);
-    }
+    private void drawPanel(DrawContext ctx, int index, int mx, int my) {
+        Category category = categories.get(index);
+        int x = panelX(), y = panelY();
+        fillRounded(ctx, x + 3, y + 4, x + PANEL_W + 3, y + PANEL_H + 4, 10, 0x55000000);
+        fillRounded(ctx, x - 1, y - 1, x + PANEL_W + 1, y + PANEL_H + 1, 10, PANEL_EDGE);
+        fillVerticalGradient(ctx, x, y, x + PANEL_W, y + PANEL_H, 0xFF3A3D42, 0xFF181A1D);
+        fillRounded(ctx, x + 2, y + 2, x + PANEL_W - 2, y + HEADER_H, 7, 0xFF191B1E);
+        drawCentered(ctx, category.name.toUpperCase(Locale.ROOT) + " MODULES", x, y + 12, PANEL_W, accent());
+        ctx.fill(x + 9, y + HEADER_H, x + PANEL_W - 9, y + HEADER_H + 1, PANEL_EDGE);
 
-    private void drawModuleDesk(DrawContext ctx, int mx, int my) {
-        int x = centerX(), y = bodyY(), w = centerW();
-        rounded(ctx, x, y, x + w, y + 78, 9, PANEL_2);
-        text(ctx, "YOUR MODULE DESK", x + 12, y + 11, ACCENT);
-        text(ctx, selectedModule == null ? "Modules" : selectedModule.title, x + 12, y + 29, TEXT);
-        text(ctx, "Select a module to configure. Left click toggles it.", x + 12, y + 48, MUTED);
-
-        int sy = y + 88;
-        rounded(ctx, x, sy, x + w, sy + 28, 6, PANEL_2);
-        text(ctx, searchQuery.isEmpty() ? "⌕  Search modules..." : "⌕  " + searchQuery,
-            x + 10, sy + 9, searchQuery.isEmpty() ? MUTED : TEXT);
-        int listTop = sy + 37;
-        int bottom = bodyBottom();
-        ctx.enableScissor(x, listTop, x + w, bottom);
-        int cy = listTop - scroll.getOrDefault(categories.get(selectedCategory), 0);
-        for (Module module : visibleModules()) {
-            boolean chosen = module == selectedModule;
-            rounded(ctx, x, cy, x + w, cy + 53, 7, chosen ? 0xFF33372F : PANEL);
-            if (chosen) rounded(ctx, x, cy + 7, x + 2, cy + 46, 1, ACCENT);
-            text(ctx, trim(module.title, w - 70), x + 11, cy + 12, TEXT);
-            text(ctx, module.isActive() ? "ACTIVE" : "INACTIVE", x + 11, cy + 31,
-                module.isActive() ? ACCENT : MUTED);
-            rounded(ctx, x + w - 33, cy + 18, x + w - 13, cy + 31, 7,
-                module.isActive() ? ACCENT : 0xFF454A53);
-            rounded(ctx, x + (module.isActive() ? w - 23 : w - 32), cy + 20, x + (module.isActive() ? w - 15 : w - 24), cy + 28, 4, 0xFFF5F5F5);
-            cy += 61;
-        }
-        ctx.disableScissor();
-    }
-
-    private void drawSettings(DrawContext ctx) {
-        int x = settingsX(), y = bodyY(), w = panelX() + panelW() - 8 - x, bottom = bodyBottom();
-        rounded(ctx, x, y, x + w, bottom, 9, PANEL);
-        text(ctx, "MODULE SETTINGS", x + 12, y + 14, MUTED);
-        if (selectedModule == null) {
-            text(ctx, "Select a module", x + 12, y + 42, TEXT);
-            return;
-        }
-        int cy = y + 37;
-        text(ctx, trim(selectedModule.title, w - 24), x + 12, cy, TEXT); cy += 20;
-        text(ctx, " " + trim(selectedModule.category.name, w - 24), x + 12, cy, MUTED); cy += 22;
-        String desc = selectedModule.description;
-        for (String line : wrap(desc, w - 24)) {
-            text(ctx, line, x + 12, cy, MUTED); cy += 12;
-            if (cy > bottom - 18) return;
-        }
-        cy += 9;
-        ctx.fill(x + 10, cy, x + w - 10, cy + 1, EDGE); cy += 10;
-        for (SettingGroup group : selectedModule.settings) {
-            for (Setting<?> setting : group) {
-                if (!setting.isVisible() || cy > bottom - 22) continue;
-                text(ctx, trim(setting.title, w - 65), x + 12, cy + 4, TEXT);
-                if (setting instanceof BoolSetting bool) {
-                    rounded(ctx, x + w - 37, cy, x + w - 12, cy + 16, 8, bool.get() ? ACCENT : 0xFF454A53);
-                    int knobX = bool.get() ? x + w - 22 : x + w - 35;
-                    rounded(ctx, knobX, cy + 2, knobX + 12, cy + 14, 6, 0xFFF4F4F4);
-                } else {
-                    text(ctx, trim(String.valueOf(setting.get()), 65), x + w - 67, cy + 4, MUTED);
-                    if (setting instanceof IntSetting || setting instanceof DoubleSetting) {
-                        rounded(ctx, x + 12, cy + 23, x + w - 12, cy + 26, 2, 0xFF555B65);
-                        rounded(ctx, x + 12, cy + 23, x + 12 + 8, cy + 26, 2, ACCENT);
-                        cy += 12;
+        int clipTop = y + HEADER_H + 7;
+        int clipBottom = y + PANEL_H - 8;
+        ctx.enableScissor(x + 3, clipTop, x + PANEL_W - 3, clipBottom);
+        int cy = clipTop - scroll.getOrDefault(category, 0);
+        for (Module module : visibleModules(category)) {
+            boolean open = expanded.getOrDefault(module, false);
+            boolean hovering = mx >= x + PAD && mx <= x + PANEL_W - PAD && my >= cy && my <= cy + ROW_H;
+            fillVerticalGradient(ctx, x + PAD, cy, x + PANEL_W - PAD, cy + ROW_H - 1, hovering ? 0xFF686D74 : 0xFF41454A, hovering ? 0xFF42464C : 0xFF292C30);
+            if (module.isActive()) ctx.fill(x + PAD, cy + 3, x + PAD + 2, cy + ROW_H - 4, accent());
+            drawTextWithShadow(ctx, module.title, x + PAD + 9, cy + 6, module.isActive() ? accent() : TEXT);
+            ctx.fill(x + PANEL_W - 16, cy + 10, x + PANEL_W - 11, cy + 15,
+                open ? GREEN : (module.isActive() ? GREEN : 0xFF777D84));
+            cy += ROW_H;
+            if (open) {
+                for (SettingGroup group : module.settings) {
+                    for (Setting<?> setting : group) {
+                        if (!setting.isVisible()) continue;
+                        String line = setting.title + ": " + String.valueOf(setting.get());
+                        drawTextWithShadow(ctx, trim(line, PANEL_W - 22), x + PAD + 5, cy + 5, MUTED);
+                        cy += 17;
                     }
                 }
-                cy += 29;
+                cy += 4;
             }
         }
+        ctx.disableScissor();
+        drawTextWithShadow(ctx, " " + visibleModules(category).size() + " MODULES", x + 7, y + PANEL_H - 15, MUTED);
     }
 
-    private List<String> wrap(String value, int maxWidth) {
-        List<String> lines = new ArrayList<>();
-        StringBuilder line = new StringBuilder();
-        for (String word : value.split(" ")) {
-            String candidate = line.isEmpty() ? word : line + " " + word;
-            if (textRenderer.getWidth(candidate) > maxWidth && !line.isEmpty()) {
-                lines.add(line.toString()); line = new StringBuilder(word);
-            } else line = new StringBuilder(candidate);
+    private String trim(String value, int maxWidth) {
+        while (!value.isEmpty() && textRenderer.getWidth(value) > maxWidth) value = value.substring(0, value.length() - 2) + "…";
+        return value;
+    }
+
+    private void drawTextWithShadow(DrawContext ctx, String value, int x, int y, int color) {
+        ctx.drawTextWithShadow(textRenderer, Text.literal(value), x, y, color);
+    }
+
+    private void drawCentered(DrawContext ctx, String value, int x, int y, int w, int color) {
+        ctx.drawTextWithShadow(textRenderer, value, x + (w - textRenderer.getWidth(value)) / 2, y, color);
+    }
+
+    private void drawThemes(DrawContext ctx, int mx, int my) {
+        int w = 88, h = 22, x = width - w - 10, y = height - h - 22;
+        fillRounded(ctx, x, y, x + w, y + h, 7, 0xFF34373B);
+        fillRounded(ctx, x, y, x + w, y + 3, 4, PANEL_EDGE);
+        drawCentered(ctx, "THEMES  ▾", x, y + 8, w, accent());
+        if (!themesOpen) return;
+        String[] choices = {"Silver", "Steel", "Graphite", "Mono"};
+        int yy = y - choices.length * 22 - 5;
+        for (String choice : choices) {
+            fillVerticalGradient(ctx, x, yy, x + w, yy + 20, 0xFF55595F, 0xFF292C30);
+            drawTextWithShadow(ctx, (theme.equals(choice) ? "● " : "○ ") + choice, x + 8, yy + 6,
+                theme.equals(choice) ? accent() : TEXT);
+            yy += 19;
         }
-        if (!line.isEmpty()) lines.add(line.toString());
-        return lines;
-    }
-
-    private void drawSimplePage(DrawContext ctx, String title, String description) {
-        int x = centerX(), y = bodyY(), w = panelX() + panelW() - 8 - x;
-        rounded(ctx, x, y, x + w, bodyBottom(), 9, PANEL);
-        text(ctx, title, x + 18, y + 20, TEXT);
-        text(ctx, description, x + 18, y + 43, MUTED);
-        if (title.equals("HUD")) {
-            text(ctx, "The compact Active Modules list is shown in-game when enabled.", x + 18, y + 82, TEXT);
-            text(ctx, "Use the module settings to control individual HUD options.", x + 18, y + 102, MUTED);
-        }
-    }
-
-    private int categoryAt(double mx, double my) {
-        int x = sideX(), y = sideY() + 31;
-        if (mx < x || mx > x + SIDEBAR_W || my < y) return -1;
-        int i = (int) ((my - y) / 29);
-        return i >= 0 && i < categories.size() && my <= y + i * 29 + 25 ? i : -1;
     }
 
     @Override
     public boolean mouseClicked(Click click, boolean doubled) {
         double mx = click.x(), my = click.y();
         int button = click.button();
-        int x = panelX(), y = panelY();
-
-        // Header tabs
-        int tx = x + panelW() - 235, ty = y + 10;
-        String[] tabs = {"Modules", "HUD", "Appearance"};
-        for (String tab : tabs) {
-            int tw = tab.equals("Appearance") ? 88 : 66;
-            if (mx >= tx && mx <= tx + tw && my >= ty && my <= ty + 29) {
-                topTab = tab; return true;
-            }
-            tx += tw + 8;
-        }
-
-        int ci = categoryAt(mx, my);
-        if (ci >= 0) { selectCategory(ci); return true; }
-        int sx = sideX(), sy = sideY(), sh = sideH();
-        if (mx >= sx && mx <= sx + SIDEBAR_W && my >= sy + sh - 43 && my <= sy + sh - 22) {
-            enabledOnly = !enabledOnly;
-            List<Module> list = visibleModules();
-            selectedModule = list.isEmpty() ? null : list.get(0);
+        int tw = 88, tx = width - tw - 10, ty = height - 22 - 22;
+        if (button == GLFW_MOUSE_BUTTON_LEFT && overSearch(mx, my)) {
+            searchFocused = true;
             return true;
         }
-
-        if (topTab.equals("Modules")) {
-            int cx = centerX(), searchY = bodyY() + 88;
-            if (mx >= cx && mx <= cx + centerW() && my >= searchY && my <= searchY + 28) {
-                searchFocused = true; return true;
-            }
-            searchFocused = false;
-            int listY = searchY + 37 - scroll.getOrDefault(categories.get(selectedCategory), 0);
-            for (Module module : visibleModules()) {
-                if (mx >= cx && mx <= cx + centerW() && my >= listY && my <= listY + 53) {
-                    selectedModule = module;
-                    if (button == GLFW_MOUSE_BUTTON_LEFT) module.toggle();
-                    else if (button == GLFW_MOUSE_BUTTON_RIGHT) expanded.put(module, !expanded.getOrDefault(module, false));
+        searchFocused = false;
+        if (button == GLFW_MOUSE_BUTTON_LEFT && my >= tabY() && my <= tabY() + 22 && mx >= tabsX() && mx <= tabsX() + tabsWidth()) {
+            int index = (int)((mx - tabsX()) / 82);
+            if (index >= 0 && index < categories.size()) selectedCategory = index;
+            return true;
+        }
+        if (button == GLFW_MOUSE_BUTTON_LEFT && mx >= tx && mx <= tx + tw && my >= ty && my <= ty + 22) {
+            themesOpen = !themesOpen;
+            return true;
+        }
+        if (themesOpen && button == GLFW_MOUSE_BUTTON_LEFT) {
+            String[] choices = {"Silver", "Steel", "Graphite", "Mono"};
+            int yy = ty - choices.length * 19 - 5;
+            for (String choice : choices) {
+                if (mx >= tx && mx <= tx + tw && my >= yy && my <= yy + 20) {
+                    theme = choice;
+                    themesOpen = false;
+                    saveLayout();
                     return true;
                 }
-                listY += 61;
-            }
-            if (selectedModule != null && mx >= settingsX() && mx <= x + panelW() - 8) {
-                int cy = bodyY() + 37 + 20 + 22;
-                for (String line : wrap(selectedModule.description, SETTINGS_W - 30)) cy += 12;
-                cy += 19;
-                for (SettingGroup group : selectedModule.settings) for (Setting<?> setting : group) {
-                    if (!setting.isVisible()) continue;
-                    if (my >= cy && my <= cy + 29) {
-                        if (setting instanceof BoolSetting bool) bool.set(!bool.get());
-                        else if (setting instanceof EnumSetting<?> mode) {
-                            List<String> opts = mode.getSuggestions();
-                            if (!opts.isEmpty()) {
-                                int current = opts.indexOf(mode.get().toString());
-                                mode.parse(opts.get((current + 1) % opts.size()));
-                            }
-                        } else if (setting instanceof IntSetting || setting instanceof DoubleSetting) {
-                            sliderSetting = setting; sliderX = settingsX() + 12; sliderW = SETTINGS_W - 36; updateSlider(mx);
-                        }
-                        return true;
-                    }
-                    cy += (setting instanceof IntSetting || setting instanceof DoubleSetting) ? 41 : 29;
-                }
+                yy += 22;
             }
         }
-        return super.mouseClicked(click, doubled);
+        if (categories.isEmpty()) return super.mouseClicked(click, doubled);
+        Category category = categories.get(Math.max(0, Math.min(selectedCategory, categories.size() - 1)));
+        int x = panelX(), y = panelY();
+        if (mx < x || mx > x + PANEL_W || my < y || my > y + PANEL_H) return super.mouseClicked(click, doubled);
+        if (my < y + HEADER_H + 7 || my > y + PANEL_H - 8) return true;
+        int cy = y + HEADER_H + 7 - scroll.getOrDefault(category, 0);
+        for (Module module : visibleModules(category)) {
+            if (mx >= x + PAD && mx <= x + PANEL_W - PAD && my >= cy && my <= cy + ROW_H) {
+                if (button == GLFW_MOUSE_BUTTON_LEFT) module.toggle();
+                else if (button == GLFW_MOUSE_BUTTON_RIGHT) expanded.put(module, !expanded.getOrDefault(module, false));
+                return true;
+            }
+            cy += ROW_H;
+            if (expanded.getOrDefault(module, false)) {
+                for (SettingGroup group : module.settings) {
+                    for (Setting<?> setting : group) {
+                        if (!setting.isVisible()) continue;
+                        if (mx >= x + PAD && mx <= x + PANEL_W - PAD && my >= cy && my <= cy + 17) {
+                            if (setting instanceof BoolSetting bool) bool.set(!bool.get());
+                            else if (setting instanceof EnumSetting<?> mode) {
+                                List<String> options = mode.getSuggestions();
+                                if (!options.isEmpty()) {
+                                    int current = options.indexOf(mode.get().toString());
+                                    mode.parse(options.get((current + 1) % options.size()));
+                                }
+                            } else if (setting instanceof IntSetting || setting instanceof DoubleSetting) {
+                                sliderSetting = setting;
+                                sliderX = x + PAD + 5;
+                                sliderW = PANEL_W - PAD * 2 - 10;
+                                updateSlider(mx);
+                            }
+                            return true;
+                        }
+                        cy += 17;
+                    }
+                }
+                cy += 4;
+            }
+        }
+        return true;
     }
 
-    @Override public boolean keyPressed(KeyInput input) {
+    @Override
+    public boolean keyPressed(KeyInput input) {
         if (searchFocused) {
             if (input.key() == GLFW_KEY_ESCAPE) { searchFocused = false; return true; }
-            if (input.key() == GLFW_KEY_BACKSPACE && !searchQuery.isEmpty()) {
-                searchQuery = searchQuery.substring(0, searchQuery.offsetByCodePoints(searchQuery.length(), -1));
-                scroll.clear(); return true;
+            if (input.key() == GLFW_KEY_BACKSPACE) {
+                if (!searchQuery.isEmpty()) {
+                    int end = searchQuery.offsetByCodePoints(searchQuery.length(), -1);
+                    searchQuery = searchQuery.substring(0, end);
+                    for (Category category : categories) scroll.put(category, 0);
+                }
+                return true;
             }
         }
         return super.keyPressed(input);
     }
 
-    @Override public boolean charTyped(CharInput input) {
+    @Override
+    public boolean charTyped(CharInput input) {
         if (!searchFocused) return super.charTyped(input);
-        int cp = input.codepoint();
-        if (Character.isValidCodePoint(cp) && !Character.isISOControl(cp)) { searchQuery += new String(Character.toChars(cp)); scroll.clear(); }
+        int codepoint = input.codepoint();
+        if (Character.isValidCodePoint(codepoint) && !Character.isISOControl(codepoint)) {
+            searchQuery += new String(Character.toChars(codepoint));
+            for (Category category : categories) scroll.put(category, 0);
+        }
         return true;
     }
 
-    private void updateSlider(double mx) {
+    private void updateSlider(double mouseX) {
         if (sliderSetting == null || sliderW <= 0) return;
-        double ratio = Math.max(0, Math.min(1, (mx - sliderX) / sliderW));
-        if (sliderSetting instanceof IntSetting s) sliderSetting.parse(Integer.toString((int)Math.round(s.sliderMin + (s.sliderMax - s.sliderMin) * ratio)));
-        else if (sliderSetting instanceof DoubleSetting s) sliderSetting.parse(Double.toString(s.sliderMin + (s.sliderMax - s.sliderMin) * ratio));
+        double ratio = Math.max(0, Math.min(1, (mouseX - sliderX) / sliderW));
+        if (sliderSetting instanceof IntSetting setting) {
+            int value = (int) Math.round(setting.sliderMin + (setting.sliderMax - setting.sliderMin) * ratio);
+            sliderSetting.parse(Integer.toString(value));
+        } else if (sliderSetting instanceof DoubleSetting setting) {
+            double value = setting.sliderMin + (setting.sliderMax - setting.sliderMin) * ratio;
+            sliderSetting.parse(Double.toString(value));
+        }
     }
 
-    @Override public boolean mouseDragged(Click click, double dx, double dy) {
-        if (sliderSetting != null) { updateSlider(click.x()); return true; }
-        return super.mouseDragged(click, dx, dy);
-    }
-    @Override public boolean mouseReleased(Click click) {
-        if (sliderSetting != null) { sliderSetting = null; return true; }
-        return super.mouseReleased(click);
-    }
-    @Override public boolean mouseScrolled(double mx, double my, double horizontal, double vertical) {
-        int cx = centerX(), top = bodyY() + 125;
-        if (mx >= cx && mx <= cx + centerW() && my >= top && my <= bodyBottom() && !categories.isEmpty()) {
-            Category c = categories.get(selectedCategory);
-            int max = Math.max(0, visibleModules().size() * 61 - (bodyBottom() - top));
-            scroll.put(c, Math.max(0, Math.min(max, scroll.getOrDefault(c, 0) - (int)(vertical * 38))));
+    @Override
+    public boolean mouseDragged(Click click, double offsetX, double offsetY) {
+        if (sliderSetting != null) {
+            updateSlider(click.x());
             return true;
         }
-        return super.mouseScrolled(mx, my, horizontal, vertical);
+        return super.mouseDragged(click, offsetX, offsetY);
     }
-    @Override public boolean shouldPause() { return false; }
+
+    @Override
+    public boolean mouseReleased(Click click) {
+        if (dragging != null) {
+            dragging = null;
+            saveLayout();
+            return true;
+        }
+        if (sliderSetting != null) {
+            sliderSetting = null;
+            return true;
+        }
+        return super.mouseReleased(click);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (categories.isEmpty()) return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+        int x = panelX(), y = panelY();
+        if (mouseX >= x && mouseX <= x + PANEL_W && mouseY >= y && mouseY <= y + PANEL_H) {
+            Category category = categories.get(Math.max(0, Math.min(selectedCategory, categories.size() - 1)));
+            int max = Math.max(0, contentHeight(category) - (PANEL_H - HEADER_H - 18));
+            scroll.put(category, Math.max(0, Math.min(max, scroll.getOrDefault(category, 0) - (int)(verticalAmount * 24))));
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+    }
+
+    private int contentHeight(Category c) {
+        int h = 0;
+        for (Module module : visibleModules(c)) {
+            h += ROW_H;
+            if (expanded.getOrDefault(module, false)) {
+                for (SettingGroup group : module.settings)
+                    for (Setting<?> setting : group) if (setting.isVisible()) h += 17;
+                h += 4;
+            }
+        }
+        return h;
+    }
+
+    @Override
+    public boolean shouldPause() {
+        return false;
+    }
 }
