@@ -193,8 +193,11 @@ public final class FizzyStandaloneScreen extends Screen {
             fillVerticalGradient(ctx, x + PAD, cy, x + PANEL_W - PAD, cy + ROW_H - 2, hovering ? 0xFF555B62 : 0xFF3A3E43, hovering ? 0xFF3A3E43 : 0xFF25282C);
             if (module.isActive()) ctx.fill(x + PAD, cy + 3, x + PAD + 2, cy + ROW_H - 4, accent());
             drawTextWithShadow(ctx, module.title, x + PAD + 10, cy + 8, module.isActive() ? 0xFFFFFFFF : TEXT);
-            ctx.fill(x + PANEL_W - 16, cy + 10, x + PANEL_W - 11, cy + 15,
-                open ? GREEN : (module.isActive() ? GREEN : 0xFF777D84));
+            int toggleX = x + PANEL_W - PAD - 25;
+            fillRounded(ctx, toggleX, cy + 6, toggleX + 19, cy + 18, 6, module.isActive() ? 0xFFBFC5CC : 0xFF17191C);
+            ctx.fill(module.isActive() ? toggleX + 11 : toggleX + 2, cy + 8,
+                module.isActive() ? toggleX + 17 : toggleX + 8, cy + 16,
+                module.isActive() ? 0xFF24272B : 0xFF858B93);
             cy += ROW_H;
             if (open) {
                 for (SettingGroup group : module.settings) {
