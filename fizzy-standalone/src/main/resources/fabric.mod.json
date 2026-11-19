@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "fizzy",
+  "version": "${version}",
+  "name": "Fizzy Client",
+  "description": "An independent client-side utility mod for Minecraft.",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["dev.fizzyclient.FizzyClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.18.2",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
