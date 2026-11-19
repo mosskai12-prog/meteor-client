@@ -430,6 +430,7 @@ public class Modules extends System<Modules> {
         add(new AutoEat());
         add(new AutoClicker());
         add(new AutoFish());
+        add(new FishingOptimizer());
         add(new AutoGap());
         add(new AutoMend());
         add(new AutoReplenish());
