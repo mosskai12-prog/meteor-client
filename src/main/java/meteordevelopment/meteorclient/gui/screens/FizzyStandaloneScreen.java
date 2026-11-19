@@ -167,7 +167,7 @@ public final class FizzyStandaloneScreen extends Screen {
         for (int i = 0; i < categories.size(); i++) {
             int x = tabsX() + i * 82, y = tabY();
             boolean active = i == selectedCategory;
-            fillRounded(ctx, x, y, x + 78, y + 22, 6, active ? 0xFF50545A : 0xFF0D2B49);
+            fillRounded(ctx, x, y, x + 78, y + 22, 6, active ? 0xFF50545A : 0xFF25272B);
             fillRounded(ctx, x, y, x + 78, y + 3, 3, active ? accent() : 0xFF9CA1A8);
             drawCentered(ctx, categories.get(i).name.toUpperCase(Locale.ROOT), x, y + 7, 78, active ? accent() : MUTED);
         }
@@ -240,7 +240,7 @@ public final class FizzyStandaloneScreen extends Screen {
         String[] choices = {"Silver", "Steel", "Graphite", "Mono"};
         int yy = y - choices.length * 22 - 5;
         for (String choice : choices) {
-            fillRounded(ctx, x, yy, x + w, yy + 20, 5, 0xFF103457);
+            fillVerticalGradient(ctx, x, yy, x + w, yy + 20, 0xFF55595F, 0xFF292C30);
             drawTextWithShadow(ctx, (theme.equals(choice) ? "● " : "○ ") + choice, x + 8, yy + 6,
                 theme.equals(choice) ? accent() : TEXT);
             yy += 19;
@@ -267,7 +267,7 @@ public final class FizzyStandaloneScreen extends Screen {
             return true;
         }
         if (themesOpen && button == GLFW_MOUSE_BUTTON_LEFT) {
-            String[] choices = {"Purple Haze", "Ocean", "Crimson", "Mono"};
+            String[] choices = {"Silver", "Steel", "Graphite", "Mono"};
             int yy = ty - choices.length * 19 - 5;
             for (String choice : choices) {
                 if (mx >= tx && mx <= tx + tw && my >= yy && my <= yy + 20) {
