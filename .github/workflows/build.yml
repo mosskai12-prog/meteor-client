@@ -1,4 +1,4 @@
-name: Fizzy Client Build # Build latest array list HUD and square GUI
+name: Fizzy Client Build # Build polished silver GUI
 
 on:
   push:
