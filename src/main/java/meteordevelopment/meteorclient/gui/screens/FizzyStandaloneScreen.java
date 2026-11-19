@@ -21,12 +21,12 @@ import static org.lwjgl.glfw.GLFW.*;
  * It deliberately uses the existing module registry for compatibility with current modules.
  */
 public final class FizzyStandaloneScreen extends Screen {
-    private static final int PANEL_W = 260, PANEL_H = 360, HEADER_H = 29;
-    private static final int GAP = 7, ROW_H = 21, PAD = 7;
+    private static final int PANEL_W = 300, PANEL_H = 390, HEADER_H = 34;
+    private static final int GAP = 8, ROW_H = 25, PAD = 9;
     // Fully opaque surfaces keep the Minecraft world from showing through the GUI.
     private static final int BG = 0xFF101113, PANEL = 0xFF25272B, PANEL_EDGE = 0xFFBFC3C8;
-    private static final int ROW = 0xFF34373B, ROW_HOVER = 0xFF555A60;
-    private static final int PURPLE = 0xFFE0E3E7, TEXT = 0xFFF5F5F5, MUTED = 0xFFB5B8BC;
+    private static final int ROW = 0xFF303338, ROW_HOVER = 0xFF454A50;
+    private static final int PURPLE = 0xFFE0E3E7, TEXT = 0xFFF5F6F7, MUTED = 0xFFADB2B8;
     private static final int GREEN = 0xFFE1E4E8;
     private final List<Category> categories = new ArrayList<>();
     private final Map<Module, Boolean> expanded = new HashMap<>();
@@ -113,7 +113,7 @@ public final class FizzyStandaloneScreen extends Screen {
     private int tabsX() { return (width - tabsWidth()) / 2; }
     private int tabY() { return 65; }
     private boolean overSearch(double mx, double my) {
-        int w = 240, x = (width - w) / 2;
+        int w = 300, x = (width - w) / 2;
         return mx >= x && mx <= x + w && my >= 36 && my <= 60;
     }
     private List<Module> visibleModules(Category category) {
@@ -148,9 +148,9 @@ public final class FizzyStandaloneScreen extends Screen {
         drawTextWithShadow(ctx, "FIZZY", 12, 10, accent());
         drawTextWithShadow(ctx, "CLIENT  /  CLICK GUI", 53, 12, MUTED);
 
-        int searchW = 240, searchX = (width - searchW) / 2;
-        fillRounded(ctx, searchX, 36, searchX + searchW, 60, 7, 0xFF25272B);
-        fillRounded(ctx, searchX, 36, searchX + searchW, 40, 7, searchFocused ? accent() : 0xFFC8CCD1);
+        int searchW = 300, searchX = (width - searchW) / 2;
+        fillVerticalGradient(ctx, searchX, 36, searchX + searchW, 60, 0xFF303338, 0xFF1D1F22);
+        ctx.fill(searchX, 36, searchX + searchW, 37, searchFocused ? accent() : 0xFF777D84);
         String searchText = searchQuery.isEmpty() ? "Search modules..." : searchQuery;
         drawTextWithShadow(ctx, searchText, searchX + 10, 44, searchQuery.isEmpty() ? MUTED : TEXT);
         if (searchFocused && (System.currentTimeMillis() / 500) % 2 == 0) {
@@ -161,7 +161,7 @@ public final class FizzyStandaloneScreen extends Screen {
         for (int i = 0; i < categories.size(); i++) {
             int x = tabsX() + i * 82, y = tabY();
             boolean active = i == selectedCategory;
-            fillRounded(ctx, x, y, x + 78, y + 22, 6, active ? 0xFF50545A : 0xFF25272B);
+            fillVerticalGradient(ctx, x, y, x + 78, y + 22, active ? 0xFF555A60 : 0xFF303338, active ? 0xFF303338 : 0xFF1D1F22);
             fillRounded(ctx, x, y, x + 78, y + 3, 3, active ? accent() : 0xFF9CA1A8);
             drawCentered(ctx, categories.get(i).name.toUpperCase(Locale.ROOT), x, y + 7, 78, active ? accent() : MUTED);
         }
@@ -177,10 +177,10 @@ public final class FizzyStandaloneScreen extends Screen {
         Category category = categories.get(index);
         int x = panelX(), y = panelY();
         fillRounded(ctx, x + 3, y + 4, x + PANEL_W + 3, y + PANEL_H + 4, 10, 0x55000000);
-        fillRounded(ctx, x - 1, y - 1, x + PANEL_W + 1, y + PANEL_H + 1, 10, PANEL_EDGE);
+        fillRounded(ctx, x - 1, y - 1, x + PANEL_W + 1, y + PANEL_H + 1, 10, 0xFF858B93);
         fillVerticalGradient(ctx, x, y, x + PANEL_W, y + PANEL_H, 0xFF3A3D42, 0xFF181A1D);
-        fillRounded(ctx, x + 2, y + 2, x + PANEL_W - 2, y + HEADER_H, 7, 0xFF191B1E);
-        drawCentered(ctx, category.name.toUpperCase(Locale.ROOT) + " MODULES", x, y + 12, PANEL_W, accent());
+        fillVerticalGradient(ctx, x + 2, y + 2, x + PANEL_W - 2, y + HEADER_H, 0xFF34383D, 0xFF202226);
+        drawCentered(ctx, category.name.toUpperCase(Locale.ROOT) + " MODULES", x, y + 14, PANEL_W, accent());
         ctx.fill(x + 9, y + HEADER_H, x + PANEL_W - 9, y + HEADER_H + 1, PANEL_EDGE);
 
         int clipTop = y + HEADER_H + 7;
@@ -190,9 +190,9 @@ public final class FizzyStandaloneScreen extends Screen {
         for (Module module : visibleModules(category)) {
             boolean open = expanded.getOrDefault(module, false);
             boolean hovering = mx >= x + PAD && mx <= x + PANEL_W - PAD && my >= cy && my <= cy + ROW_H;
-            fillVerticalGradient(ctx, x + PAD, cy, x + PANEL_W - PAD, cy + ROW_H - 1, hovering ? 0xFF686D74 : 0xFF41454A, hovering ? 0xFF42464C : 0xFF292C30);
+            fillVerticalGradient(ctx, x + PAD, cy, x + PANEL_W - PAD, cy + ROW_H - 2, hovering ? 0xFF555B62 : 0xFF3A3E43, hovering ? 0xFF3A3E43 : 0xFF25282C);
             if (module.isActive()) ctx.fill(x + PAD, cy + 3, x + PAD + 2, cy + ROW_H - 4, accent());
-            drawTextWithShadow(ctx, module.title, x + PAD + 9, cy + 6, module.isActive() ? accent() : TEXT);
+            drawTextWithShadow(ctx, module.title, x + PAD + 10, cy + 8, module.isActive() ? 0xFFFFFFFF : TEXT);
             ctx.fill(x + PANEL_W - 16, cy + 10, x + PANEL_W - 11, cy + 15,
                 open ? GREEN : (module.isActive() ? GREEN : 0xFF777D84));
             cy += ROW_H;
@@ -209,7 +209,7 @@ public final class FizzyStandaloneScreen extends Screen {
             }
         }
         ctx.disableScissor();
-        drawTextWithShadow(ctx, " " + visibleModules(category).size() + " MODULES", x + 7, y + PANEL_H - 15, MUTED);
+        drawTextWithShadow(ctx, visibleModules(category).size() + " MODULES  •  " + Modules.get().getGroup(category).stream().filter(Module::isActive).count() + " ACTIVE", x + 9, y + PANEL_H - 16, MUTED);
     }
 
     private String trim(String value, int maxWidth) {
@@ -227,9 +227,9 @@ public final class FizzyStandaloneScreen extends Screen {
 
     private void drawThemes(DrawContext ctx, int mx, int my) {
         int w = 88, h = 22, x = width - w - 10, y = height - h - 22;
-        fillRounded(ctx, x, y, x + w, y + h, 7, 0xFF34373B);
+        fillVerticalGradient(ctx, x, y, x + w, y + h, 0xFF454A50, 0xFF25282C);
         fillRounded(ctx, x, y, x + w, y + 3, 4, PANEL_EDGE);
-        drawCentered(ctx, "THEMES  ▾", x, y + 8, w, accent());
+        drawCentered(ctx, "THEME: " + theme.toUpperCase(Locale.ROOT) + "  ▾", x, y + 8, w, accent());
         if (!themesOpen) return;
         String[] choices = {"Silver", "Steel", "Graphite", "Mono"};
         int yy = y - choices.length * 22 - 5;
