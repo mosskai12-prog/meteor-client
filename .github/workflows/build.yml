@@ -1,4 +1,4 @@
-name: Fizzy Client Build # Rebuild latest branded GUI and icon
+name: Fizzy Client Build # Build latest array list HUD and square GUI
 
 on:
   push:
