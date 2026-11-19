@@ -1,27 +1,21 @@
-/*
- * This file is part of the Meteor Client distribution (https://github.com/MeteorDevelopment/meteor-client).
- * Copyright (c) Meteor Development.
- */
-
 package meteordevelopment.meteorclient.utils.network;
 
-public class OnlinePlayers {
-    private static long lastPingTime;
-
+/**
+ * Fizzy privacy change:
+ *
+ * Meteor's public online-player service is unrelated to the Minecraft server.
+ * Keep these compatibility methods so existing call sites remain valid, but do
+ * not send online/leave pings to meteorclient.com.
+ */
+public final class OnlinePlayers {
     private OnlinePlayers() {
     }
 
     public static void update() {
-        long time = System.currentTimeMillis();
-
-        if (time - lastPingTime > 5 * 60 * 1000) {
-            MeteorExecutor.execute(() -> Http.post("https://meteorclient.com/api/online/ping").ignoreExceptions().send());
-
-            lastPingTime = time;
-        }
+        // Disabled in Fizzy: no external online-presence reporting.
     }
 
     public static void leave() {
-        MeteorExecutor.execute(() -> Http.post("https://meteorclient.com/api/online/leave").ignoreExceptions().send());
+        // Disabled in Fizzy: no external online-presence reporting.
     }
 }
