@@ -3,6 +3,11 @@ package meteordevelopment.meteorclient.gui.screens;
 import meteordevelopment.meteorclient.systems.modules.Category;
 import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.systems.modules.Modules;
+import meteordevelopment.meteorclient.systems.hud.Hud;
+import meteordevelopment.meteorclient.systems.hud.HudElement;
+import meteordevelopment.meteorclient.systems.hud.XAnchor;
+import meteordevelopment.meteorclient.systems.hud.YAnchor;
+import meteordevelopment.meteorclient.systems.hud.elements.ActiveModulesHud;
 import meteordevelopment.meteorclient.settings.*;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -45,7 +50,24 @@ public final class FizzyStandaloneScreen extends Screen {
     public FizzyStandaloneScreen() {
         super(Text.literal("Fizzy Client"));
         for (Category category : Modules.loopCategories()) categories.add(category);
+        enableActiveModulesHud();
         loadLayout();
+    }
+
+    // Keep the enabled-module ArrayList visible after the click GUI is closed.
+    private void enableActiveModulesHud() {
+        Hud hud = Hud.get();
+        if (hud == null) return;
+        hud.active = true;
+
+        for (HudElement element : hud) {
+            if ("active-modules".equals(element.info.name)) {
+                if (!element.isActive()) element.toggle();
+                return;
+            }
+        }
+
+        hud.add(ActiveModulesHud.INFO, -4, 4, XAnchor.Right, YAnchor.Top);
     }
 
     private void loadLayout() {
