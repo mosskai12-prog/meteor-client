@@ -194,15 +194,15 @@ public class Hud extends System<Hud> implements Iterable<HudElement> {
 
         int h = (int) Math.ceil(HudRenderer.INSTANCE.textHeight(true));
 
-        // Top Left
-        add(MeteorTextHud.WATERMARK, 4, 4, XAnchor.Left, YAnchor.Top);
-        add(MeteorTextHud.FPS, 4, 4 + h, XAnchor.Left, YAnchor.Top);
-        add(MeteorTextHud.TPS, 4, 4 + h * 2, XAnchor.Left, YAnchor.Top);
-        add(MeteorTextHud.PING, 4, 4 + h * 3, XAnchor.Left, YAnchor.Top);
-        add(MeteorTextHud.SPEED, 4, 4 + h * 4, XAnchor.Left, YAnchor.Top);
+        // Top Right - status information
+        add(MeteorTextHud.WATERMARK, -4, 4, XAnchor.Right, YAnchor.Top);
+        add(MeteorTextHud.FPS, -4, 4 + h, XAnchor.Right, YAnchor.Top);
+        add(MeteorTextHud.TPS, -4, 4 + h * 2, XAnchor.Right, YAnchor.Top);
+        add(MeteorTextHud.PING, -4, 4 + h * 3, XAnchor.Right, YAnchor.Top);
+        add(MeteorTextHud.SPEED, -4, 4 + h * 4, XAnchor.Right, YAnchor.Top);
 
-        // Top Right
-        add(ActiveModulesHud.INFO, -4, 4, XAnchor.Right, YAnchor.Top);
+        // Active modules appear directly below the status information.
+        add(ActiveModulesHud.INFO, -4, 4 + h * 5, XAnchor.Right, YAnchor.Top);
 
         // Fizzy hunting dashboard
         add(FizzyDashboardHud.INFO, 4, 4 + h * 5, XAnchor.Left, YAnchor.Top);
